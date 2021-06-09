@@ -3,12 +3,8 @@ from typing import (
     List,
     Dict,
     Optional,
-    Callable,
-    Awaitable,
-    Any,
     TYPE_CHECKING,
 )
-from functools import wraps
 
 from aiorsmq import scripts, exceptions, compat
 
@@ -26,7 +22,7 @@ class Message:
         self.rc = rc
 
 
-class Queue:
+class QueueAttributes:
     __slots__ = [
         "vt",
         "delay",
@@ -43,10 +39,10 @@ class Queue:
         vt: int,
         delay: int,
         max_size: int,
-        total_recv: Optional[int] = None,
-        total_sent: Optional[int] = None,
-        created: Optional[int] = None,
-        modified: Optional[int] = None,
+        total_recv: int,
+        total_sent: int,
+        created: int,
+        modified: int,
     ) -> None:
         self.vt = vt
         self.delay = delay
@@ -57,29 +53,10 @@ class Queue:
         self.modified = modified
 
 
-class AIORSMQ:
+class AIORSMQCore:
     def __init__(self, *, client: "Redis", ns: Text = compat.DEFAULT_NAMESPACE) -> None:
         self._client = client
         self._ns = ns
-        self._initialized = False
-
-        self._script_pop_message = None
-        self._script_receive_message = None
-        self._script_change_message_visibility = None
-
-    def connected(
-        method: Callable[..., Awaitable[Any]]
-    ) -> Callable[..., Awaitable[Any]]:
-        @wraps(method)
-        async def inner(self, *args: List, **kwargs: Dict) -> Any:
-            await self._initialize()
-            return await method(self, *args, **kwargs)
-
-        return inner
-
-    async def _initialize(self) -> None:
-        if self._initialized:
-            return
 
         self._script_pop_message = self._client.register_script(scripts.POP_MESSAGE)
         self._script_receive_message = self._client.register_script(
@@ -88,8 +65,6 @@ class AIORSMQ:
         self._script_change_message_visibility = self._client.register_script(
             scripts.CHANGE_MESSAGE_VISIBILITY
         )
-
-        self._initialized = True
 
     async def _get_queue_and_uid(self, queue_name: Text) -> Dict[Text, int]:
         key = compat.queue_name(self._ns, queue_name)
@@ -117,7 +92,6 @@ class AIORSMQ:
             "uid": uid,
         }
 
-    @connected
     async def create_queue(
         self,
         queue_name: Text,
@@ -144,7 +118,6 @@ class AIORSMQ:
 
         await self._client.sadd(compat.queues_set(self._ns), queue_name)
 
-    @connected
     async def list_queues(self) -> List[Text]:
         queues = await self._client.smembers(compat.queues_set(self._ns))
         return list(queues)
@@ -166,7 +139,7 @@ class AIORSMQ:
                 f"Queue '{queue_name}' does not exist."
             )
 
-    async def get_queue_attributes(self, queue_name: Text) -> Dict[Text, int]:
+    async def get_queue_attributes(self, queue_name: Text) -> QueueAttributes:
         pass
 
     async def set_queue_attributes(
