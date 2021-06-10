@@ -5,6 +5,7 @@ DEFAULT_VT = 30
 DEFAULT_DELAY = 0
 DEFAULT_MAX_SIZE = 65536
 DEFAULT_NAMESPACE = "rsmq"
+TOTAL_SENT = "totalsent"
 NAMESPACE_SEP = ":"
 QUEUE_NAME_SUFFIX = "Q"
 QUEUES_SUFFIX = "QUEUES"
@@ -12,6 +13,7 @@ ID_CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
 DEFAULT_ID_RAND_LENGTH = 22
 
 VT = "vt"
+RT = "rt"
 DELAY = "delay"
 MAX_SIZE = "maxsize"
 CREATED = "created"
@@ -31,6 +33,10 @@ def queue_name(ns: Text, base: Text, with_q: bool = True) -> Text:
 
 def queues_set(ns: Text) -> Text:
     return ns + NAMESPACE_SEP + QUEUES_SUFFIX
+
+
+def queue_rt(ns: Text, base: Text) -> Text:
+    return ns + NAMESPACE_SEP + RT + NAMESPACE_SEP + base
 
 
 def format_zero_pad(n: int, count: int) -> Text:

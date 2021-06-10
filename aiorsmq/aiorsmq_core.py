@@ -3,6 +3,7 @@ from typing import (
     List,
     Dict,
     Optional,
+    NamedTuple,
     TYPE_CHECKING,
 )
 
@@ -54,9 +55,23 @@ class QueueAttributes:
 
 
 class AIORSMQCore:
-    def __init__(self, *, client: "Redis", ns: Text = compat.DEFAULT_NAMESPACE) -> None:
+    class QueueContext(NamedTuple):
+        vt: int
+        delay: int
+        max_size: int
+        ts: int
+        uid: Text
+
+    def __init__(
+        self,
+        *,
+        client: "Redis",
+        ns: Text = compat.DEFAULT_NAMESPACE,
+        real_time: bool = False,
+    ) -> None:
         self._client = client
         self._ns = ns
+        self._real_time = real_time
 
         self._script_pop_message = self._client.register_script(scripts.POP_MESSAGE)
         self._script_receive_message = self._client.register_script(
@@ -66,7 +81,7 @@ class AIORSMQCore:
             scripts.CHANGE_MESSAGE_VISIBILITY
         )
 
-    async def _get_queue_and_uid(self, queue_name: Text) -> Dict[Text, int]:
+    async def _get_queue_context(self, queue_name: Text) -> "AIORSMQCore.QueueContext":
         key = compat.queue_name(self._ns, queue_name)
         pipeline = self._client.pipeline()
 
@@ -80,17 +95,20 @@ class AIORSMQCore:
                 f"Queue '{queue_name}' does not exist."
             )
 
-        ms: Text = compat.format_zero_pad(result[1][1], 6)
-        uid: Text = compat.base36_encode(int(str(result[1][0]) + ms)) + compat.make_id()
-        ts: int = int(str(result[1][0]) + ms[0:3])
+        unix_time: int = result[1][0]
+        microseconds: int = result[1][1]
 
-        return {
-            compat.VT: int(result[0][0]),
-            compat.DELAY: int(result[0][1]),
-            compat.MAX_SIZE: int(result[0][2]),
-            "ts": ts,
-            "uid": uid,
-        }
+        ms: Text = compat.format_zero_pad(microseconds, 6)
+        uid: Text = compat.base36_encode(int(str(unix_time) + ms)) + compat.make_id()
+        ts: int = (unix_time * 1000) + (microseconds // 1000)
+
+        return AIORSMQCore.QueueContext(
+            vt=int(result[0][0]),
+            delay=int(result[0][1]),
+            max_size=int(result[0][2]),
+            ts=ts,
+            uid=uid,
+        )
 
     async def create_queue(
         self,
@@ -152,9 +170,30 @@ class AIORSMQCore:
         pass
 
     async def send_message(
-        self, queue_name: Text, message: Text, delay: Optional[int] = None
+        self, queue_name: Text, message: Text, delay: int = 0
     ) -> Text:
-        pass
+        context = await self._get_queue_context(queue_name)
+
+        # TODO: Check params
+
+        key_base = compat.queue_name(self._ns, queue_name, False)
+        key_queue = compat.queue_name(self._ns, queue_name)
+
+        pipeline = self._client.pipeline()
+
+        pipeline.zadd(key_base, {context.uid: context.ts + delay * 1000})
+        pipeline.hset(key_queue, context.uid, message)
+        pipeline.hincrby(key_queue, compat.TOTAL_SENT, 1)
+
+        if self._real_time:
+            pipeline.zcard(key_base)
+
+        result = await pipeline.execute()
+
+        if self._real_time:
+            await self._client.publish(compat.queue_rt(self._ns, queue_name), result[3])
+
+        return context.uid
 
     async def receive_message(
         self, queue_name: Text, vt: Optional[int] = None
