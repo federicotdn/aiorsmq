@@ -13,45 +13,22 @@ if TYPE_CHECKING:
     from aioredis.client import Redis
 
 
-class Message:
-    __slots__ = ["message", "id", "sent", "fr", "rc"]
-
-    def __init__(self, *, message: Text, id: Text, fr: int, rc: int) -> None:
-        self.message = message
-        self.id = id
-        self.fr = fr
-        self.rc = rc
+class Message(NamedTuple):
+    message: Text
+    id: Text
+    fr: int
+    rc: int
+    sent: float
 
 
-class QueueAttributes:
-    __slots__ = [
-        "vt",
-        "delay",
-        "max_size",
-        "total_recv",
-        "total_sent",
-        "created",
-        "modified",
-    ]
-
-    def __init__(
-        self,
-        *,
-        vt: int,
-        delay: int,
-        max_size: int,
-        total_recv: int,
-        total_sent: int,
-        created: int,
-        modified: int,
-    ) -> None:
-        self.vt = vt
-        self.delay = delay
-        self.max_size = max_size
-        self.total_recv = total_recv
-        self.total_sent = total_sent
-        self.created = created
-        self.modified = modified
+class QueueAttributes(NamedTuple):
+    vt: int
+    delay: int
+    max_size: int
+    total_recv: int
+    total_sent: int
+    created: int
+    modified: int
 
 
 class AIORSMQCore:
@@ -60,7 +37,7 @@ class AIORSMQCore:
         delay: int
         max_size: int
         ts: int
-        uid: Text
+        uid: Optional[Text]
 
     def __init__(
         self,
@@ -81,7 +58,9 @@ class AIORSMQCore:
             scripts.CHANGE_MESSAGE_VISIBILITY
         )
 
-    async def _get_queue_context(self, queue_name: Text) -> "AIORSMQCore.QueueContext":
+    async def _get_queue_context(
+        self, queue_name: Text, add_uid: bool = False
+    ) -> "AIORSMQCore.QueueContext":
         key = compat.queue_name(self._ns, queue_name)
         pipeline = self._client.pipeline()
 
@@ -98,9 +77,12 @@ class AIORSMQCore:
         unix_time: int = result[1][0]
         microseconds: int = result[1][1]
 
-        ms: Text = compat.format_zero_pad(microseconds, 6)
-        uid: Text = compat.base36_encode(int(str(unix_time) + ms)) + compat.make_id()
+        uid: Optional[Text] = None
         ts: int = (unix_time * 1000) + (microseconds // 1000)
+
+        if add_uid:
+            ms: Text = compat.format_zero_pad(microseconds, 6)
+            uid = compat.base36_encode(int(str(unix_time) + ms)) + compat.make_id()
 
         return AIORSMQCore.QueueContext(
             vt=int(result[0][0]),
@@ -174,7 +156,7 @@ class AIORSMQCore:
         self, queue_name: Text, message: Text, delay: Optional[int] = None
     ) -> Text:
         # TODO: Validate params
-        context = await self._get_queue_context(queue_name)
+        context = await self._get_queue_context(queue_name, add_uid=True)
         delay = context.delay if delay is None else delay
 
         key_base = compat.queue_name(self._ns, queue_name, with_q=False)
@@ -204,8 +186,21 @@ class AIORSMQCore:
     async def delete_message(self, queue_name: Text, id: Text) -> None:
         pass
 
-    async def pop_message(self, queue_name: Text, id: Text) -> None:
-        pass
+    async def pop_message(self, queue_name: Text) -> None:
+        context = await self._get_queue_context(queue_name)
+        key_base = compat.queue_name(self._ns, queue_name, with_q=False)
+
+        result = await self._script_pop_message(keys=[key_base, context.ts])
+        if not result:
+            return None
+
+        return Message(
+            message=result[1],
+            id=result[0],
+            fr=int(result[3]),
+            rc=result[2],
+            sent=compat.base36_decode(result[0][:10]) / 1000,
+        )
 
     async def change_message_visibility(
         self, queue_name: Text, id: Text, vt: int
@@ -214,9 +209,14 @@ class AIORSMQCore:
         context = await self._get_queue_context(queue_name)
         key_base = compat.queue_name(self._ns, queue_name, with_q=False)
 
-        return await self._script_change_message_visibility(
+        result = await self._script_change_message_visibility(
             keys=[key_base, id, context.ts + vt * 1000]
         )
+
+        if result == 0:
+            raise exceptions.MessageNotFoundException(
+                f"Message with ID '{id}' does not exist."
+            )
 
     async def quit(self) -> None:
         await self._client.close()

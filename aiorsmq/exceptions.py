@@ -8,3 +8,7 @@ class QueueExistsException(AIORSMQException):
 
 class QueueNotFoundException(AIORSMQException):
     """Exception raised when a queue does not exist."""
+
+
+class MessageNotFoundException(AIORSMQException):
+    """Exception raised when a message does not exist."""

@@ -47,7 +47,7 @@ def make_id(length: int = DEFAULT_ID_RAND_LENGTH) -> Text:
     return "".join([random.choice(ID_CHARACTERS) for _ in range(length)])
 
 
-def base36_encode(n: int):
+def base36_encode(n: int) -> Text:
     if n == 0:
         return "0"
 
@@ -57,3 +57,7 @@ def base36_encode(n: int):
         result = BASE36_ALPHABET[i] + result
 
     return result
+
+
+def base36_decode(value: Text) -> int:
+    return int(value, 36)
