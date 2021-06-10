@@ -7,10 +7,10 @@ from typing import (
     TYPE_CHECKING,
 )
 
-from aiorsmq import scripts, exceptions, compat
+from aiorsmq import scripts, exceptions, compat, utils
 
 if TYPE_CHECKING:
-    from aioredis.client import Redis
+    from aioredis.client import Redis  # type: ignore
 
 
 class Message(NamedTuple):
@@ -141,7 +141,7 @@ class AIORSMQCore:
             )
 
     async def get_queue_attributes(self, queue_name: Text) -> QueueAttributes:
-        pass
+        raise NotImplementedError
 
     async def set_queue_attributes(
         self,
@@ -150,7 +150,7 @@ class AIORSMQCore:
         delay: Optional[int] = None,
         max_size: Optional[int] = None,
     ) -> Dict[Text, int]:
-        pass
+        raise NotImplementedError
 
     async def send_message(
         self, queue_name: Text, message: Text, delay: Optional[int] = None
@@ -176,17 +176,17 @@ class AIORSMQCore:
         if self._real_time:
             await self._client.publish(compat.queue_rt(self._ns, queue_name), result[3])
 
-        return context.uid
+        return utils.unwrap(context.uid)
 
     async def receive_message(
         self, queue_name: Text, vt: Optional[int] = None
     ) -> Optional[Message]:
-        pass
+        raise NotImplementedError
 
     async def delete_message(self, queue_name: Text, id: Text) -> None:
-        pass
+        raise NotImplementedError
 
-    async def pop_message(self, queue_name: Text) -> None:
+    async def pop_message(self, queue_name: Text) -> Optional[Message]:
         context = await self._get_queue_context(queue_name)
         key_base = compat.queue_name(self._ns, queue_name, with_q=False)
 
