@@ -61,10 +61,10 @@ class AIORSMQCore:
     async def _get_queue_context(
         self, queue_name: Text, add_uid: bool = False
     ) -> "AIORSMQCore.QueueContext":
-        key = compat.queue_name(self._ns, queue_name)
+        key_hash = compat.queue_hash(self._ns, queue_name)
         pipeline = self._client.pipeline()
 
-        pipeline.hmget(key, [compat.VT, compat.DELAY, compat.MAX_SIZE])
+        pipeline.hmget(key_hash, [compat.VT, compat.DELAY, compat.MAX_SIZE])
         pipeline.time()
 
         result = await pipeline.execute()
@@ -100,15 +100,15 @@ class AIORSMQCore:
         max_size: int = compat.DEFAULT_MAX_SIZE,
     ) -> None:
         # TODO: Validate params
-        key = compat.queue_name(self._ns, queue_name)
+        key_hash = compat.queue_hash(self._ns, queue_name)
         pipeline = self._client.pipeline()
         now = await self._client.time()
 
-        pipeline.hsetnx(key, compat.VT, vt)
-        pipeline.hsetnx(key, compat.DELAY, delay)
-        pipeline.hsetnx(key, compat.MAX_SIZE, max_size)
-        pipeline.hsetnx(key, compat.CREATED, now[0])
-        pipeline.hsetnx(key, compat.MODIFIED, now[0])
+        pipeline.hsetnx(key_hash, compat.VT, vt)
+        pipeline.hsetnx(key_hash, compat.DELAY, delay)
+        pipeline.hsetnx(key_hash, compat.MAX_SIZE, max_size)
+        pipeline.hsetnx(key_hash, compat.CREATED, now[0])
+        pipeline.hsetnx(key_hash, compat.MODIFIED, now[0])
 
         result = await pipeline.execute()
 
@@ -125,8 +125,8 @@ class AIORSMQCore:
 
     async def delete_queue(self, queue_name: Text) -> None:
         keys = [
-            compat.queue_name(self._ns, queue_name),
-            compat.queue_name(self._ns, queue_name, with_q=False),
+            compat.queue_hash(self._ns, queue_name),
+            compat.queue_sorted_set(self._ns, queue_name),
         ]
 
         pipeline = self._client.pipeline()
@@ -159,17 +159,17 @@ class AIORSMQCore:
         context = await self._get_queue_context(queue_name, add_uid=True)
         delay = context.delay if delay is None else delay
 
-        key_base = compat.queue_name(self._ns, queue_name, with_q=False)
-        key_queue = compat.queue_name(self._ns, queue_name)
+        key_sorted_set = compat.queue_sorted_set(self._ns, queue_name)
+        key_hash = compat.queue_hash(self._ns, queue_name)
 
         pipeline = self._client.pipeline()
 
-        pipeline.zadd(key_base, {context.uid: context.ts + delay * 1000})
-        pipeline.hset(key_queue, context.uid, message)
-        pipeline.hincrby(key_queue, compat.TOTAL_SENT, 1)
+        pipeline.zadd(key_sorted_set, {context.uid: context.ts + delay * 1000})
+        pipeline.hset(key_hash, context.uid, message)
+        pipeline.hincrby(key_hash, compat.TOTAL_SENT, 1)
 
         if self._real_time:
-            pipeline.zcard(key_base)
+            pipeline.zcard(key_sorted_set)
 
         result = await pipeline.execute()
 
@@ -188,9 +188,9 @@ class AIORSMQCore:
 
     async def pop_message(self, queue_name: Text) -> Optional[Message]:
         context = await self._get_queue_context(queue_name)
-        key_base = compat.queue_name(self._ns, queue_name, with_q=False)
+        key_sorted_set = compat.queue_sorted_set(self._ns, queue_name)
 
-        result = await self._script_pop_message(keys=[key_base, context.ts])
+        result = await self._script_pop_message(keys=[key_sorted_set, context.ts])
         if not result:
             return None
 
@@ -207,10 +207,10 @@ class AIORSMQCore:
     ) -> None:
         # TODO: Validate params
         context = await self._get_queue_context(queue_name)
-        key_base = compat.queue_name(self._ns, queue_name, with_q=False)
+        key_sorted_set = compat.queue_sorted_set(self._ns, queue_name)
 
         result = await self._script_change_message_visibility(
-            keys=[key_base, id, context.ts + vt * 1000]
+            keys=[key_sorted_set, id, context.ts + vt * 1000]
         )
 
         if result == 0:

@@ -7,7 +7,7 @@ DEFAULT_MAX_SIZE = 65536
 DEFAULT_NAMESPACE = "rsmq"
 TOTAL_SENT = "totalsent"
 NAMESPACE_SEP = ":"
-QUEUE_NAME_SUFFIX = "Q"
+QUEUE_HASH_SUFFIX = "Q"
 QUEUES_SUFFIX = "QUEUES"
 ID_CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
 DEFAULT_ID_RAND_LENGTH = 22
@@ -22,13 +22,12 @@ MODIFIED = "modified"
 BASE36_ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyz"
 
 
-def queue_name(ns: Text, base: Text, with_q: bool = True) -> Text:
-    name = ns + NAMESPACE_SEP + base
+def queue_hash(ns: Text, base: Text) -> Text:
+    return ns + NAMESPACE_SEP + base + NAMESPACE_SEP + QUEUE_HASH_SUFFIX
 
-    if with_q:
-        name += NAMESPACE_SEP + QUEUE_NAME_SUFFIX
 
-    return name
+def queue_sorted_set(ns: Text, base: Text) -> Text:
+    return ns + NAMESPACE_SEP + base
 
 
 def queues_set(ns: Text) -> Text:
