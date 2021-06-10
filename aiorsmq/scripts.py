@@ -1,3 +1,5 @@
+from typing import Text, Tuple
+
 # Taken from:
 #   https://github.com/smrchy/rsmq/blob/master/_src/index.ts
 
@@ -43,3 +45,7 @@ if not msg then
 end
 redis.call("ZADD", KEYS[1], KEYS[3], KEYS[2])
 return 1"""
+
+
+MsgRecv = Tuple[Text, Text, int, Text]
+MsgVisibility = int

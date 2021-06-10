@@ -2,6 +2,7 @@ from typing import (
     Text,
     List,
     Dict,
+    Tuple,
     Optional,
     NamedTuple,
     TYPE_CHECKING,
@@ -178,22 +179,8 @@ class AIORSMQCore:
 
         return utils.unwrap(context.uid)
 
-    async def receive_message(
-        self, queue_name: Text, vt: Optional[int] = None
-    ) -> Optional[Message]:
-        raise NotImplementedError
-
-    async def delete_message(self, queue_name: Text, id: Text) -> None:
-        raise NotImplementedError
-
-    async def pop_message(self, queue_name: Text) -> Optional[Message]:
-        context = await self._get_queue_context(queue_name)
-        key_sorted_set = compat.queue_sorted_set(self._ns, queue_name)
-
-        result = await self._script_pop_message(keys=[key_sorted_set, context.ts])
-        if not result:
-            return None
-
+    @staticmethod
+    def _message_from_script_result(result: scripts.MsgRecv) -> Message:
         return Message(
             message=result[1],
             id=result[0],
@@ -202,6 +189,37 @@ class AIORSMQCore:
             sent=compat.base36_decode(result[0][:10]) / 1000,
         )
 
+    async def receive_message(
+        self, queue_name: Text, vt: Optional[int] = None
+    ) -> Optional[Message]:
+        # TODO: Validate params
+        context = await self._get_queue_context(queue_name)
+        key_sorted_set = compat.queue_sorted_set(self._ns, queue_name)
+        vt = context.vt if vt is None else vt
+
+        result: scripts.MsgRecv = await self._script_receive_message(
+            keys=[key_sorted_set, context.ts, context.ts + vt * 1000]
+        )
+        if not result:
+            return None
+
+        return self._message_from_script_result(result)
+
+    async def delete_message(self, queue_name: Text, id: Text) -> None:
+        raise NotImplementedError
+
+    async def pop_message(self, queue_name: Text) -> Optional[Message]:
+        context = await self._get_queue_context(queue_name)
+        key_sorted_set = compat.queue_sorted_set(self._ns, queue_name)
+
+        result: scripts.MsgRecv = await self._script_pop_message(
+            keys=[key_sorted_set, context.ts]
+        )
+        if not result:
+            return None
+
+        return self._message_from_script_result(result)
+
     async def change_message_visibility(
         self, queue_name: Text, id: Text, vt: int
     ) -> None:
@@ -209,7 +227,7 @@ class AIORSMQCore:
         context = await self._get_queue_context(queue_name)
         key_sorted_set = compat.queue_sorted_set(self._ns, queue_name)
 
-        result = await self._script_change_message_visibility(
+        result: scripts.MsgVisibility = await self._script_change_message_visibility(
             keys=[key_sorted_set, id, context.ts + vt * 1000]
         )
 
