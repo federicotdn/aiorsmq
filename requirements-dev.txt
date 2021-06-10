@@ -1,2 +1,4 @@
 black==21.5b2
 mypy==0.902
+pytest==6.2.4
+pytest-asyncio==0.15.1

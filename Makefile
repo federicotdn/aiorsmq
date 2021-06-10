@@ -1,7 +1,10 @@
 SHELL = bash
 
 types:
-	mypy aiorsmq
+	mypy aiorsmq tests
 
 format:
-	black aiorsmq
+	black aiorsmq tests
+
+test:
+	pytest tests
