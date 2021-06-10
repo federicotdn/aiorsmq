@@ -117,6 +117,7 @@ class AIORSMQCore:
         delay: int = compat.DEFAULT_DELAY,
         max_size: int = compat.DEFAULT_MAX_SIZE,
     ) -> None:
+        # TODO: Validate params
         key = compat.queue_name(self._ns, queue_name)
         pipeline = self._client.pipeline()
         now = await self._client.time()
@@ -170,13 +171,13 @@ class AIORSMQCore:
         pass
 
     async def send_message(
-        self, queue_name: Text, message: Text, delay: int = 0
+        self, queue_name: Text, message: Text, delay: Optional[int] = None
     ) -> Text:
+        # TODO: Validate params
         context = await self._get_queue_context(queue_name)
+        delay = context.delay if delay is None else delay
 
-        # TODO: Check params
-
-        key_base = compat.queue_name(self._ns, queue_name, False)
+        key_base = compat.queue_name(self._ns, queue_name, with_q=False)
         key_queue = compat.queue_name(self._ns, queue_name)
 
         pipeline = self._client.pipeline()
@@ -209,4 +210,13 @@ class AIORSMQCore:
     async def change_message_visibility(
         self, queue_name: Text, id: Text, vt: int
     ) -> None:
-        pass
+        # TODO: Validate params
+        context = await self._get_queue_context(queue_name)
+        key_base = compat.queue_name(self._ns, queue_name, with_q=False)
+
+        return await self._script_change_message_visibility(
+            keys=[key_base, id, context.ts + vt * 1000]
+        )
+
+    async def quit(self) -> None:
+        await self._client.close()
