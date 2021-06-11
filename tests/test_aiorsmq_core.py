@@ -2,14 +2,17 @@ from typing import Text
 import asyncio
 
 import pytest
+import aioredis  # type: ignore
 
-from aiorsmq import AIORSMQCore
+from aiorsmq import AIORSMQCore, compat
 from aiorsmq.exceptions import (
     QueueExistsException,
     MessageNotFoundException,
     QueueNotFoundException,
     NoAttributesSpecified,
 )
+
+from tests.conftest import TEST_NS  # type: ignore
 
 pytestmark = pytest.mark.asyncio
 
@@ -63,9 +66,42 @@ async def test_send_message(core_client: AIORSMQCore, queue: Text):
     assert len(uids) == len(set(uids))
 
 
+async def test_send_message_rt(
+    redis_client: aioredis.Redis, core_client: AIORSMQCore, queue: Text
+):
+    pubsub = redis_client.pubsub(ignore_subscribe_messages=True)
+    rt_key = compat.queue_rt(TEST_NS, queue)
+    await pubsub.subscribe(rt_key)
+
+    await core_client.send_message(queue, "foobar")
+
+    # TODO: pubsub.get_message() is not working for some reason
+    async for value in pubsub.listen():
+        assert value["channel"] == rt_key
+        assert value["data"] == "1"
+        break
+
+    await core_client.send_message(queue, "foobar2")
+
+    async for value in pubsub.listen():
+        assert value["data"] == "2"
+        break
+
+    await pubsub.unsubscribe(rt_key)
+    await pubsub.close()
+
+
 async def test_send_message_delay(core_client: AIORSMQCore, queue: Text):
     await core_client.send_message(queue, "foobar", delay=30)
     assert not await core_client.receive_message(queue)
+
+
+async def test_send_message_delay_queue_configured(
+    core_client: AIORSMQCore, qname: Text
+):
+    await core_client.create_queue(qname, delay=30)
+    await core_client.send_message(qname, "foobar")
+    assert not await core_client.receive_message(qname)
 
 
 async def test_receive_message_empty(core_client: AIORSMQCore, queue: Text):
@@ -97,10 +133,23 @@ async def test_receive_message_twice_vt(core_client: AIORSMQCore, queue: Text):
 
 async def test_receive_message_twice_vt_expired(core_client: AIORSMQCore, queue: Text):
     uid = await core_client.send_message(queue, "foobar")
-    await core_client.receive_message(queue, vt=1)
-    await asyncio.sleep(1.5)
+    await core_client.receive_message(queue, vt=0)
 
     msg = await core_client.receive_message(queue)
+    assert msg is not None
+    assert msg.id == uid
+    assert msg.message == "foobar"
+    assert msg.rc == 2
+
+
+async def test_receive_message_twice_vt_expired_queue_configured(
+    core_client: AIORSMQCore, qname: Text
+):
+    await core_client.create_queue(qname, vt=0)
+    uid = await core_client.send_message(qname, "foobar")
+    await core_client.receive_message(qname)
+
+    msg = await core_client.receive_message(qname)
     assert msg is not None
     assert msg.id == uid
     assert msg.message == "foobar"
@@ -110,6 +159,17 @@ async def test_receive_message_twice_vt_expired(core_client: AIORSMQCore, queue:
 async def test_receive_message_failure(core_client: AIORSMQCore, qname: Text):
     with pytest.raises(QueueNotFoundException):
         await core_client.receive_message(qname)
+
+
+async def test_pop_message_fifo_order(core_client: AIORSMQCore, queue: Text):
+    messages = [str(i) for i in range(100)]
+    for m in messages:
+        await core_client.send_message(queue, m)
+
+    for m in messages:
+        received = await core_client.pop_message(queue)
+        assert received is not None
+        assert received.message == m
 
 
 async def test_pop_message(core_client: AIORSMQCore, qname: Text):
