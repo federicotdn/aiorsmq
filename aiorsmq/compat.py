@@ -6,6 +6,7 @@ DEFAULT_DELAY = 0
 DEFAULT_MAX_SIZE = 65536
 DEFAULT_NAMESPACE = "rsmq"
 TOTAL_SENT = "totalsent"
+TOTAL_RECV = "totalrecv"
 NAMESPACE_SEP = ":"
 QUEUE_HASH_SUFFIX = "Q"
 QUEUES_SUFFIX = "QUEUES"
@@ -18,32 +19,46 @@ DELAY = "delay"
 MAX_SIZE = "maxsize"
 CREATED = "created"
 MODIFIED = "modified"
+RC = "rc"
+FR = "fr"
 
 BASE36_ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyz"
 
 
+def _ns_join(*args: Text) -> Text:
+    return NAMESPACE_SEP.join(args)
+
+
 def queue_hash(ns: Text, base: Text) -> Text:
-    return ns + NAMESPACE_SEP + base + NAMESPACE_SEP + QUEUE_HASH_SUFFIX
+    return _ns_join(ns, base, QUEUE_HASH_SUFFIX)
 
 
 def queue_sorted_set(ns: Text, base: Text) -> Text:
-    return ns + NAMESPACE_SEP + base
+    return _ns_join(ns, base)
 
 
 def queues_set(ns: Text) -> Text:
-    return ns + NAMESPACE_SEP + QUEUES_SUFFIX
+    return _ns_join(ns, QUEUES_SUFFIX)
 
 
 def queue_rt(ns: Text, base: Text) -> Text:
-    return ns + NAMESPACE_SEP + RT + NAMESPACE_SEP + base
+    return _ns_join(ns, RT, base)
 
 
-def format_zero_pad(n: int, count: int) -> Text:
-    return str(n).zfill(count)
+def message_rc(id: Text) -> Text:
+    return _ns_join(id, RC)
 
 
-def make_id(length: int = DEFAULT_ID_RAND_LENGTH) -> Text:
-    return "".join([random.choice(ID_CHARACTERS) for _ in range(length)])
+def message_fr(id: Text) -> Text:
+    return _ns_join(id, FR)
+
+
+def message_uid(unix_time: int, microseconds: int) -> Text:
+    suffix = "".join(
+        [random.choice(ID_CHARACTERS) for _ in range(DEFAULT_ID_RAND_LENGTH)]
+    )
+
+    return base36_encode(unix_time * 1000000 + microseconds) + suffix
 
 
 def base36_encode(n: int) -> Text:

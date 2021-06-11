@@ -6,7 +6,13 @@ types:
 format:
 	black aiorsmq tests
 
+format-check:
+	black --check aiorsmq tests
+
 test:
 	docker-compose -f tests/docker-compose.yml up -d
-	pytest tests
+	pytest tests -vvv
 	docker-compose -f tests/docker-compose.yml down
+
+lint:
+	flake8 aiorsmq tests

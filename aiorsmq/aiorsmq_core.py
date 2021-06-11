@@ -1,8 +1,6 @@
 from typing import (
     Text,
     List,
-    Dict,
-    Tuple,
     Optional,
     NamedTuple,
     TYPE_CHECKING,
@@ -30,6 +28,8 @@ class QueueAttributes(NamedTuple):
     total_sent: int
     created: int
     modified: int
+    messages: int
+    hidden_messages: int
 
 
 class AIORSMQCore:
@@ -82,8 +82,7 @@ class AIORSMQCore:
         ts: int = (unix_time * 1000) + (microseconds // 1000)
 
         if add_uid:
-            ms: Text = compat.format_zero_pad(microseconds, 6)
-            uid = compat.base36_encode(int(str(unix_time) + ms)) + compat.make_id()
+            uid = compat.message_uid(unix_time, microseconds)
 
         return AIORSMQCore.QueueContext(
             vt=int(result[0][0]),
@@ -126,8 +125,8 @@ class AIORSMQCore:
 
     async def delete_queue(self, queue_name: Text) -> None:
         keys = [
-            compat.queue_hash(self._ns, queue_name),
             compat.queue_sorted_set(self._ns, queue_name),
+            compat.queue_hash(self._ns, queue_name),
         ]
 
         pipeline = self._client.pipeline()
@@ -142,7 +141,47 @@ class AIORSMQCore:
             )
 
     async def get_queue_attributes(self, queue_name: Text) -> QueueAttributes:
-        raise NotImplementedError
+        time = await self._client.time()
+        key_sorted_set = compat.queue_sorted_set(self._ns, queue_name)
+        key_hash = compat.queue_hash(self._ns, queue_name)
+        pipeline = self._client.pipeline()
+
+        pipeline.hmget(
+            key_hash,
+            compat.VT,
+            compat.DELAY,
+            compat.MAX_SIZE,
+            compat.TOTAL_RECV,
+            compat.TOTAL_SENT,
+            compat.CREATED,
+            compat.MODIFIED,
+        )
+        pipeline.zcard(key_sorted_set)
+
+        # NOTE: The JavaScript implementation uses only `time[0] * 1000`, which
+        # implies that sending a message and then retrieving queue attributes
+        # within the same second might yield incorrect results.
+        # Using `time[0] * 1000 + time[1] // 1000` would be ideal, but I will
+        # stick to the original implementation.
+        pipeline.zcount(key_sorted_set, time[0] * 1000, "+inf")
+
+        result = await pipeline.execute()
+        if result[0][0] is None:
+            raise exceptions.QueueNotFoundException(
+                f"Queue '{queue_name}' does not exist."
+            )
+
+        return QueueAttributes(
+            vt=int(result[0][0]),
+            delay=int(result[0][1]),
+            max_size=int(result[0][2]),
+            total_recv=int(result[0][3] or 0),
+            total_sent=int(result[0][4] or 0),
+            created=int(result[0][5]),
+            modified=int(result[0][6]),
+            messages=result[1],
+            hidden_messages=result[2],
+        )
 
     async def set_queue_attributes(
         self,
@@ -150,8 +189,29 @@ class AIORSMQCore:
         vt: Optional[int] = None,
         delay: Optional[int] = None,
         max_size: Optional[int] = None,
-    ) -> Dict[Text, int]:
-        raise NotImplementedError
+    ) -> QueueAttributes:
+        if vt is None and delay is None and max_size is None:
+            raise exceptions.NoAttributesSpecified(
+                "At least one queue attribute must be specified."
+            )
+
+        # Check if the queue exists
+        await self._get_queue_context(queue_name)
+
+        key_hash = compat.queue_hash(self._ns, queue_name)
+
+        time = await self._client.time()
+        pipeline = self._client.pipeline()
+
+        pipeline.hset(key_hash, compat.MODIFIED, time[0])
+        attributes = {compat.VT: vt, compat.DELAY: delay, compat.MAX_SIZE: max_size}
+        for k, v in attributes.items():
+            if v is not None:
+                pipeline.hset(key_hash, k, v)
+
+        await pipeline.execute()
+
+        return await self.get_queue_attributes(queue_name)
 
     async def send_message(
         self, queue_name: Text, message: Text, delay: Optional[int] = None
@@ -206,7 +266,18 @@ class AIORSMQCore:
         return self._message_from_script_result(result)
 
     async def delete_message(self, queue_name: Text, id: Text) -> None:
-        raise NotImplementedError
+        key_sorted_set = compat.queue_sorted_set(self._ns, queue_name)
+        key_hash = compat.queue_hash(self._ns, queue_name)
+        pipeline = self._client.pipeline()
+
+        pipeline.zrem(key_sorted_set, id)
+        pipeline.hdel(key_hash, id, compat.message_rc(id), compat.message_fr(id))
+
+        result = await pipeline.execute()
+        if result[0] == 0 or result[1] == 0:
+            raise exceptions.MessageNotFoundException(
+                f"Message with ID '{id}' does not exist."
+            )
 
     async def pop_message(self, queue_name: Text) -> Optional[Message]:
         context = await self._get_queue_context(queue_name)
