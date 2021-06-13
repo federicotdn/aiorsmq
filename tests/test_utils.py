@@ -5,6 +5,6 @@ import pytest
 
 def test_unrwap():
     with pytest.raises(RuntimeError):
-        utils.unwrap(None)
+        utils.ensure(None)
 
-    assert utils.unwrap(1) == 1
+    assert utils.ensure(1) == 1

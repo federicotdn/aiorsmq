@@ -13,6 +13,10 @@ if TYPE_CHECKING:
 
 
 class Message(NamedTuple):
+    """Represents a message received from a queue.
+
+    """
+
     message: Text
     id: Text
     fr: int
@@ -32,14 +36,15 @@ class QueueAttributes(NamedTuple):
     hidden_messages: int
 
 
-class AIORSMQCore:
-    class QueueContext(NamedTuple):
-        vt: int
-        delay: int
-        max_size: int
-        ts: int
-        uid: Optional[Text]
+class _QueueContext(NamedTuple):
+    vt: int
+    delay: int
+    max_size: int
+    ts: int
+    uid: Optional[Text]
 
+
+class AIORSMQCore:
     def __init__(
         self,
         *,
@@ -47,6 +52,13 @@ class AIORSMQCore:
         ns: Text = compat.DEFAULT_NAMESPACE,
         real_time: bool = False,
     ) -> None:
+        """Initialize a `AIORSMQCore` object.
+
+        Args:
+            client: Redis client to use internally.
+            ns: Namespace to prefix keys with.
+            real_time: Enable real time mode.
+        """
         self._client = client
         self._ns = ns
         self._real_time = real_time
@@ -61,7 +73,7 @@ class AIORSMQCore:
 
     async def _get_queue_context(
         self, queue_name: Text, add_uid: bool = False
-    ) -> "AIORSMQCore.QueueContext":
+    ) -> _QueueContext:
         key_hash = compat.queue_hash(self._ns, queue_name)
         pipeline = self._client.pipeline()
 
@@ -84,7 +96,7 @@ class AIORSMQCore:
         if add_uid:
             uid = compat.message_uid(unix_time, microseconds)
 
-        return AIORSMQCore.QueueContext(
+        return _QueueContext(
             vt=int(result[0][0]),
             delay=int(result[0][1]),
             max_size=int(result[0][2]),
@@ -237,7 +249,7 @@ class AIORSMQCore:
         if self._real_time:
             await self._client.publish(compat.queue_rt(self._ns, queue_name), result[3])
 
-        return utils.unwrap(context.uid)
+        return utils.ensure(context.uid)
 
     @staticmethod
     def _message_from_script_result(result: scripts.MsgRecv) -> Message:
