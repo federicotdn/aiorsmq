@@ -75,17 +75,20 @@ async def test_send_message_rt(
 
     await core_client.send_message(queue, "foobar")
 
-    # TODO: pubsub.get_message() is not working for some reason
-    async for value in pubsub.listen():
-        assert value["channel"] == rt_key
-        assert value["data"] == "1"
-        break
+    value = None
+    while not value:
+        value = await pubsub.get_message()
+
+    assert value["channel"] == rt_key
+    assert value["data"] == "1"
 
     await core_client.send_message(queue, "foobar2")
 
-    async for value in pubsub.listen():
-        assert value["data"] == "2"
-        break
+    value = None
+    while not value:
+        value = await pubsub.get_message()
+
+    assert value["data"] == "2"
 
     await pubsub.unsubscribe(rt_key)
     await pubsub.close()
