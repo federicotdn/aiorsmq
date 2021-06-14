@@ -1,0 +1,11 @@
+{
+    "name": "aiorsmq-tests",
+    "description": "Tests for Python aiorsmq package.",
+    "version": "0.1.0",
+    "dependencies": {
+        "rsmq": "^0.12.4"
+    },
+    "scripts": {
+        "start": "node helper.js"
+    }
+}

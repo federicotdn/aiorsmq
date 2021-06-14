@@ -13,9 +13,7 @@ if TYPE_CHECKING:
 
 
 class Message(NamedTuple):
-    """Represents a message received from a queue.
-
-    """
+    """Represents a message received from a queue."""
 
     message: Text
     id: Text
