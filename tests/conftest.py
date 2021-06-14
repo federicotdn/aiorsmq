@@ -6,7 +6,7 @@ from datetime import datetime
 
 import pytest
 import aioredis  # type: ignore
-from aiorsmq import AIORSMQCore, compat
+from aiorsmq import AIORSMQ, compat
 
 TEST_NS = "testing"
 
@@ -21,8 +21,8 @@ async def redis_client() -> AsyncGenerator[aioredis.Redis, None]:
 
 
 @pytest.fixture
-def core_client(redis_client: aioredis.Redis) -> AIORSMQCore:
-    return AIORSMQCore(client=redis_client, ns=TEST_NS, real_time=True)
+def core_client(redis_client: aioredis.Redis) -> AIORSMQ:
+    return AIORSMQ(client=redis_client, ns=TEST_NS, real_time=True)
 
 
 @pytest.fixture
@@ -38,6 +38,6 @@ def msg_id() -> Text:
 
 
 @pytest.fixture
-async def queue(core_client: AIORSMQCore, qname: Text) -> Text:
+async def queue(core_client: AIORSMQ, qname: Text) -> Text:
     await core_client.create_queue(qname)
     return qname

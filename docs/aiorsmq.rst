@@ -2,6 +2,6 @@ aiorsmq package
 ===============
 
 .. automodule:: aiorsmq
-   :members: AIORSMQ, AIORSMQCore, Message, QueueAttributes
+   :members: AIORSMQ, Message, QueueAttributes
    :undoc-members:
    :show-inheritance:

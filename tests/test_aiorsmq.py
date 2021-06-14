@@ -4,7 +4,7 @@ import asyncio
 import pytest
 import aioredis  # type: ignore
 
-from aiorsmq import AIORSMQCore, compat
+from aiorsmq import AIORSMQ, compat
 from aiorsmq.exceptions import (
     QueueExistsException,
     MessageNotFoundException,
@@ -17,29 +17,29 @@ from tests.conftest import TEST_NS  # type: ignore
 pytestmark = pytest.mark.asyncio
 
 
-async def test_create_queue(core_client: AIORSMQCore, qname: Text):
+async def test_create_queue(core_client: AIORSMQ, qname: Text):
     assert qname not in (await core_client.list_queues())
     await core_client.create_queue(qname)
     assert qname in (await core_client.list_queues())
 
 
-async def test_create_queue_failure(core_client: AIORSMQCore, queue: Text):
+async def test_create_queue_failure(core_client: AIORSMQ, queue: Text):
     with pytest.raises(QueueExistsException):
         await core_client.create_queue(queue)
 
 
-async def test_delete_queue_failure(core_client: AIORSMQCore, qname: Text):
+async def test_delete_queue_failure(core_client: AIORSMQ, qname: Text):
     with pytest.raises(QueueNotFoundException):
         await core_client.delete_queue(qname)
 
 
-async def test_delete_queue(core_client: AIORSMQCore, queue: Text):
+async def test_delete_queue(core_client: AIORSMQ, queue: Text):
     assert queue in (await core_client.list_queues())
     await core_client.delete_queue(queue)
     assert queue not in (await core_client.list_queues())
 
 
-async def test_delete_queue_clears_messages(core_client: AIORSMQCore, queue: Text):
+async def test_delete_queue_clears_messages(core_client: AIORSMQ, queue: Text):
     await core_client.send_message(queue, "foobar")
     assert (await core_client.get_queue_attributes(queue)).messages == 1
 
@@ -49,12 +49,12 @@ async def test_delete_queue_clears_messages(core_client: AIORSMQCore, queue: Tex
     assert (await core_client.get_queue_attributes(queue)).messages == 0
 
 
-async def test_send_message_failure(core_client: AIORSMQCore, qname: Text):
+async def test_send_message_failure(core_client: AIORSMQ, qname: Text):
     with pytest.raises(QueueNotFoundException):
         await core_client.send_message(qname, "foobar")
 
 
-async def test_send_message(core_client: AIORSMQCore, queue: Text):
+async def test_send_message(core_client: AIORSMQ, queue: Text):
     uid = await core_client.send_message(queue, "foobar")
     assert len(uid) == 32
 
@@ -67,7 +67,7 @@ async def test_send_message(core_client: AIORSMQCore, queue: Text):
 
 
 async def test_send_message_rt(
-    redis_client: aioredis.Redis, core_client: AIORSMQCore, queue: Text
+    redis_client: aioredis.Redis, core_client: AIORSMQ, queue: Text
 ):
     pubsub = redis_client.pubsub(ignore_subscribe_messages=True)
     rt_key = compat.queue_rt(TEST_NS, queue)
@@ -94,25 +94,25 @@ async def test_send_message_rt(
     await pubsub.close()
 
 
-async def test_send_message_delay(core_client: AIORSMQCore, queue: Text):
+async def test_send_message_delay(core_client: AIORSMQ, queue: Text):
     await core_client.send_message(queue, "foobar", delay=30)
     assert not await core_client.receive_message(queue)
 
 
 async def test_send_message_delay_queue_configured(
-    core_client: AIORSMQCore, qname: Text
+    core_client: AIORSMQ, qname: Text
 ):
     await core_client.create_queue(qname, delay=30)
     await core_client.send_message(qname, "foobar")
     assert not await core_client.receive_message(qname)
 
 
-async def test_receive_message_empty(core_client: AIORSMQCore, queue: Text):
+async def test_receive_message_empty(core_client: AIORSMQ, queue: Text):
     msg = await core_client.receive_message(queue)
     assert msg is None
 
 
-async def test_receive_message(core_client: AIORSMQCore, queue: Text):
+async def test_receive_message(core_client: AIORSMQ, queue: Text):
     uid = await core_client.send_message(queue, "foobar")
     msg = await core_client.receive_message(queue)
 
@@ -125,7 +125,7 @@ async def test_receive_message(core_client: AIORSMQCore, queue: Text):
     assert msg.sent > 0
 
 
-async def test_receive_message_twice_vt(core_client: AIORSMQCore, queue: Text):
+async def test_receive_message_twice_vt(core_client: AIORSMQ, queue: Text):
     uid = await core_client.send_message(queue, "foobar")
     msg = await core_client.receive_message(queue)
     assert msg is not None and msg.id == uid
@@ -134,7 +134,7 @@ async def test_receive_message_twice_vt(core_client: AIORSMQCore, queue: Text):
     assert msg is None
 
 
-async def test_receive_message_twice_vt_expired(core_client: AIORSMQCore, queue: Text):
+async def test_receive_message_twice_vt_expired(core_client: AIORSMQ, queue: Text):
     uid = await core_client.send_message(queue, "foobar")
     await core_client.receive_message(queue, vt=0)
 
@@ -146,7 +146,7 @@ async def test_receive_message_twice_vt_expired(core_client: AIORSMQCore, queue:
 
 
 async def test_receive_message_twice_vt_expired_queue_configured(
-    core_client: AIORSMQCore, qname: Text
+    core_client: AIORSMQ, qname: Text
 ):
     await core_client.create_queue(qname, vt=0)
     uid = await core_client.send_message(qname, "foobar")
@@ -159,12 +159,12 @@ async def test_receive_message_twice_vt_expired_queue_configured(
     assert msg.rc == 2
 
 
-async def test_receive_message_failure(core_client: AIORSMQCore, qname: Text):
+async def test_receive_message_failure(core_client: AIORSMQ, qname: Text):
     with pytest.raises(QueueNotFoundException):
         await core_client.receive_message(qname)
 
 
-async def test_pop_message_fifo_order(core_client: AIORSMQCore, queue: Text):
+async def test_pop_message_fifo_order(core_client: AIORSMQ, queue: Text):
     messages = [str(i) for i in range(100)]
     for m in messages:
         await core_client.send_message(queue, m)
@@ -175,7 +175,7 @@ async def test_pop_message_fifo_order(core_client: AIORSMQCore, queue: Text):
         assert received.message == m
 
 
-async def test_pop_message(core_client: AIORSMQCore, qname: Text):
+async def test_pop_message(core_client: AIORSMQ, qname: Text):
     await core_client.create_queue(qname, vt=0)
     uid = await core_client.send_message(qname, "foobar")
     msg = await core_client.pop_message(qname)
@@ -192,12 +192,12 @@ async def test_pop_message(core_client: AIORSMQCore, qname: Text):
     assert msg is None
 
 
-async def test_pop_message_failure(core_client: AIORSMQCore, qname: Text):
+async def test_pop_message_failure(core_client: AIORSMQ, qname: Text):
     with pytest.raises(QueueNotFoundException):
         await core_client.pop_message(qname)
 
 
-async def test_change_message_visiblity(core_client: AIORSMQCore, queue: Text):
+async def test_change_message_visiblity(core_client: AIORSMQ, queue: Text):
     uid = await core_client.send_message(queue, "foobar")
     msg = await core_client.receive_message(queue)
     assert msg is not None
@@ -212,7 +212,7 @@ async def test_change_message_visiblity(core_client: AIORSMQCore, queue: Text):
 
 
 async def test_change_message_visiblity_failure(
-    core_client: AIORSMQCore, qname: Text, msg_id: Text
+    core_client: AIORSMQ, qname: Text, msg_id: Text
 ):
     with pytest.raises(QueueNotFoundException):
         await core_client.change_message_visibility(qname, msg_id, 10)
@@ -224,7 +224,7 @@ async def test_change_message_visiblity_failure(
 
 
 async def test_change_message_visiblity_after_pop_failure(
-    core_client: AIORSMQCore, qname: Text
+    core_client: AIORSMQ, qname: Text
 ):
     await core_client.create_queue(qname, vt=0)
     uid = await core_client.send_message(qname, "foobar")
@@ -236,7 +236,7 @@ async def test_change_message_visiblity_after_pop_failure(
 
 
 async def test_delete_message_failure(
-    core_client: AIORSMQCore, qname: Text, msg_id: Text
+    core_client: AIORSMQ, qname: Text, msg_id: Text
 ):
     # Queue does not exist yet
     with pytest.raises(MessageNotFoundException):
@@ -249,7 +249,7 @@ async def test_delete_message_failure(
         await core_client.delete_message(qname, msg_id)
 
 
-async def test_delete_message_no_rc(core_client: AIORSMQCore, queue: Text):
+async def test_delete_message_no_rc(core_client: AIORSMQ, queue: Text):
     # Delete message that was never received
     uid = await core_client.send_message(queue, "foobar")
     await core_client.delete_message(queue, uid)
@@ -257,7 +257,7 @@ async def test_delete_message_no_rc(core_client: AIORSMQCore, queue: Text):
     assert (await core_client.get_queue_attributes(queue)).messages == 0
 
 
-async def test_delete_message(core_client: AIORSMQCore, queue: Text):
+async def test_delete_message(core_client: AIORSMQ, queue: Text):
     # Delete message that was received once
     uid = await core_client.send_message(queue, "foobar")
     await core_client.receive_message(queue)
@@ -267,19 +267,19 @@ async def test_delete_message(core_client: AIORSMQCore, queue: Text):
     assert (await core_client.get_queue_attributes(queue)).messages == 0
 
 
-async def test_list_queues(core_client: AIORSMQCore, qname: Text):
+async def test_list_queues(core_client: AIORSMQ, qname: Text):
     queues = await core_client.list_queues()
     await core_client.create_queue(qname)
 
     assert sorted(queues + [qname]) == sorted(await core_client.list_queues())
 
 
-async def test_get_queue_attributes_failure(core_client: AIORSMQCore, qname: Text):
+async def test_get_queue_attributes_failure(core_client: AIORSMQ, qname: Text):
     with pytest.raises(QueueNotFoundException):
         await core_client.get_queue_attributes(qname)
 
 
-async def test_get_queue_attributes_defaults(core_client: AIORSMQCore, queue: Text):
+async def test_get_queue_attributes_defaults(core_client: AIORSMQ, queue: Text):
     attributes = await core_client.get_queue_attributes(queue)
 
     assert attributes.vt == 30
@@ -293,7 +293,7 @@ async def test_get_queue_attributes_defaults(core_client: AIORSMQCore, queue: Te
     assert attributes.hidden_messages == 0
 
 
-async def test_get_queue_attributes(core_client: AIORSMQCore, qname: Text):
+async def test_get_queue_attributes(core_client: AIORSMQ, qname: Text):
     vt = 44
     delay = 12
     max_size = 1000
@@ -305,13 +305,13 @@ async def test_get_queue_attributes(core_client: AIORSMQCore, qname: Text):
     assert attributes.max_size == max_size
 
 
-async def test_get_queue_attributes_with_traffic(core_client: AIORSMQCore, queue: Text):
+async def test_get_queue_attributes_with_traffic(core_client: AIORSMQ, queue: Text):
     await core_client.send_message(queue, "foobar")
     await core_client.send_message(queue, "foobar2")
     await core_client.receive_message(queue)
 
     # Wait for more than a second - to see why, read comment in
-    # `AIORSMQCore.get_queue_attributes`.
+    # `AIORSMQ.get_queue_attributes`.
     await asyncio.sleep(1.5)
 
     attributes = await core_client.get_queue_attributes(queue)
@@ -322,7 +322,7 @@ async def test_get_queue_attributes_with_traffic(core_client: AIORSMQCore, queue
     assert attributes.hidden_messages == 1
 
 
-async def test_set_queue_attributes_failure(core_client: AIORSMQCore, qname: Text):
+async def test_set_queue_attributes_failure(core_client: AIORSMQ, qname: Text):
     with pytest.raises(QueueNotFoundException):
         await core_client.set_queue_attributes(qname, vt=1)
 
@@ -332,7 +332,7 @@ async def test_set_queue_attributes_failure(core_client: AIORSMQCore, qname: Tex
         await core_client.set_queue_attributes(qname)
 
 
-async def test_set_queue_attributes(core_client: AIORSMQCore, queue: Text):
+async def test_set_queue_attributes(core_client: AIORSMQ, queue: Text):
     vt = 44
     delay = 12
     max_size = 1000
@@ -344,7 +344,7 @@ async def test_set_queue_attributes(core_client: AIORSMQCore, queue: Text):
     assert attributes.max_size == max_size
 
 
-async def test_set_queue_attributes_from_new(core_client: AIORSMQCore, qname: Text):
+async def test_set_queue_attributes_from_new(core_client: AIORSMQ, qname: Text):
     vt = 44
     delay = 12
     max_size = 1000

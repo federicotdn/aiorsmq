@@ -1,4 +1,3 @@
-from .aiorsmq_core import AIORSMQCore, Message, QueueAttributes
-from .aiorsmq import AIORSMQ
+from .aiorsmq import AIORSMQ, Message, QueueAttributes
 
-__all__ = ["AIORSMQCore", "AIORSMQ", "Message", "QueueAttributes"]
+__all__ = ["AIORSMQ", "Message", "QueueAttributes"]
