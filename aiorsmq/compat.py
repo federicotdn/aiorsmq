@@ -1,5 +1,4 @@
 import random
-from typing import Text
 
 DEFAULT_VT = 30
 DEFAULT_DELAY = 0
@@ -39,35 +38,35 @@ ID_RE = r"^([a-zA-Z0-9:]){32}$"
 BASE36_ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyz"
 
 
-def _ns_join(*args: Text) -> Text:
+def _ns_join(*args: str) -> str:
     return NAMESPACE_SEP.join(args)
 
 
-def queue_hash(ns: Text, base: Text) -> Text:
+def queue_hash(ns: str, base: str) -> str:
     return _ns_join(ns, base, QUEUE_HASH_SUFFIX)
 
 
-def queue_sorted_set(ns: Text, base: Text) -> Text:
+def queue_sorted_set(ns: str, base: str) -> str:
     return _ns_join(ns, base)
 
 
-def queues_set(ns: Text) -> Text:
+def queues_set(ns: str) -> str:
     return _ns_join(ns, QUEUES_SUFFIX)
 
 
-def queue_rt(ns: Text, base: Text) -> Text:
+def queue_rt(ns: str, base: str) -> str:
     return _ns_join(ns, RT, base)
 
 
-def message_rc(id: Text) -> Text:
+def message_rc(id: str) -> str:
     return _ns_join(id, RC)
 
 
-def message_fr(id: Text) -> Text:
+def message_fr(id: str) -> str:
     return _ns_join(id, FR)
 
 
-def message_uid(unix_time: int, microseconds: int) -> Text:
+def message_uid(unix_time: int, microseconds: int) -> str:
     suffix = "".join(
         [random.choice(ID_CHARACTERS) for _ in range(DEFAULT_ID_RAND_LENGTH)]
     )
@@ -75,7 +74,7 @@ def message_uid(unix_time: int, microseconds: int) -> Text:
     return base36_encode(unix_time * 1000000 + microseconds) + suffix
 
 
-def base36_encode(n: int) -> Text:
+def base36_encode(n: int) -> str:
     if n == 0:
         return "0"
 
@@ -87,5 +86,5 @@ def base36_encode(n: int) -> Text:
     return result
 
 
-def base36_decode(value: Text) -> int:
+def base36_decode(value: str) -> int:
     return int(value, 36)

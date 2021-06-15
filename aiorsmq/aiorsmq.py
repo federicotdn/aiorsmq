@@ -1,5 +1,4 @@
 from typing import (
-    Text,
     List,
     Optional,
     NamedTuple,
@@ -16,9 +15,7 @@ class Message:
 
     __slots__ = ["message", "id", "fr", "rc", "sent"]
 
-    def __init__(
-        self, *, message: Text, id: Text, fr: int, rc: int, sent: float
-    ) -> None:
+    def __init__(self, *, message: str, id: str, fr: int, rc: int, sent: float) -> None:
         self.message = message
         self.id = id
         self.fr = fr
@@ -68,7 +65,7 @@ class _QueueContext(NamedTuple):
     delay: int
     max_size: int
     ts: int
-    uid: Optional[Text]
+    uid: Optional[str]
 
 
 class AIORSMQ:
@@ -85,7 +82,7 @@ class AIORSMQ:
         self,
         *,
         client: aioredis.Redis,
-        ns: Text = compat.DEFAULT_NAMESPACE,
+        ns: str = compat.DEFAULT_NAMESPACE,
         real_time: bool = False,
     ) -> None:
         """Initialize an `AIORSMQ` object.
@@ -112,8 +109,8 @@ class AIORSMQ:
 
     @staticmethod
     def _validate(
-        queue_name: Optional[Text] = None,
-        id: Optional[Text] = None,
+        queue_name: Optional[str] = None,
+        id: Optional[str] = None,
         vt: Optional[int] = None,
         delay: Optional[int] = None,
         max_size: Optional[int] = None,
@@ -141,7 +138,7 @@ class AIORSMQ:
             )
 
     async def _get_queue_context(
-        self, queue_name: Text, add_uid: bool = False
+        self, queue_name: str, add_uid: bool = False
     ) -> _QueueContext:
         key_hash = compat.queue_hash(self._ns, queue_name)
         pipeline = self._client.pipeline()
@@ -159,7 +156,7 @@ class AIORSMQ:
         unix_time: int = result[1][0]
         microseconds: int = result[1][1]
 
-        uid: Optional[Text] = None
+        uid: Optional[str] = None
         ts: int = (unix_time * 1000) + (microseconds // 1000)
 
         if add_uid:
@@ -175,7 +172,7 @@ class AIORSMQ:
 
     async def create_queue(
         self,
-        queue_name: Text,
+        queue_name: str,
         vt: int = compat.DEFAULT_VT,
         delay: int = compat.DEFAULT_DELAY,
         max_size: int = compat.DEFAULT_MAX_SIZE,
@@ -215,7 +212,7 @@ class AIORSMQ:
 
         await self._client.sadd(compat.queues_set(self._ns), queue_name)
 
-    async def list_queues(self) -> List[Text]:
+    async def list_queues(self) -> List[str]:
         """Retrieve a list of all existing queues.
 
         Note that the namespace is **not** included in the queue names.
@@ -226,7 +223,7 @@ class AIORSMQ:
         queues = await self._client.smembers(compat.queues_set(self._ns))
         return list(queues)
 
-    async def delete_queue(self, queue_name: Text) -> None:
+    async def delete_queue(self, queue_name: str) -> None:
         self._validate(queue_name=queue_name)
 
         keys = [
@@ -245,7 +242,7 @@ class AIORSMQ:
                 f"Queue '{queue_name}' does not exist."
             )
 
-    async def get_queue_attributes(self, queue_name: Text) -> QueueAttributes:
+    async def get_queue_attributes(self, queue_name: str) -> QueueAttributes:
         self._validate(queue_name=queue_name)
 
         time = await self._client.time()
@@ -292,7 +289,7 @@ class AIORSMQ:
 
     async def set_queue_attributes(
         self,
-        queue_name: Text,
+        queue_name: str,
         vt: Optional[int] = None,
         delay: Optional[int] = None,
         max_size: Optional[int] = None,
@@ -323,8 +320,8 @@ class AIORSMQ:
         return await self.get_queue_attributes(queue_name)
 
     async def send_message(
-        self, queue_name: Text, message: Text, delay: Optional[int] = None
-    ) -> Text:
+        self, queue_name: str, message: str, delay: Optional[int] = None
+    ) -> str:
         self._validate(queue_name=queue_name, delay=delay)
 
         context = await self._get_queue_context(queue_name, add_uid=True)
@@ -368,7 +365,7 @@ class AIORSMQ:
         )
 
     async def receive_message(
-        self, queue_name: Text, vt: Optional[int] = None
+        self, queue_name: str, vt: Optional[int] = None
     ) -> Optional[Message]:
         self._validate(queue_name=queue_name, vt=vt)
 
@@ -384,7 +381,7 @@ class AIORSMQ:
 
         return self._message_from_script_result(result)
 
-    async def delete_message(self, queue_name: Text, id: Text) -> None:
+    async def delete_message(self, queue_name: str, id: str) -> None:
         self._validate(queue_name=queue_name, id=id)
 
         key_sorted_set = compat.queue_sorted_set(self._ns, queue_name)
@@ -400,7 +397,7 @@ class AIORSMQ:
                 f"Message with ID '{id}' does not exist."
             )
 
-    async def pop_message(self, queue_name: Text) -> Optional[Message]:
+    async def pop_message(self, queue_name: str) -> Optional[Message]:
         self._validate(queue_name=queue_name)
 
         context = await self._get_queue_context(queue_name)
@@ -415,7 +412,7 @@ class AIORSMQ:
         return self._message_from_script_result(result)
 
     async def change_message_visibility(
-        self, queue_name: Text, id: Text, vt: int
+        self, queue_name: str, id: str, vt: int
     ) -> None:
         self._validate(queue_name=queue_name, vt=vt, id=id)
 

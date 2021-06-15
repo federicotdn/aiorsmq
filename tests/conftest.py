@@ -1,4 +1,4 @@
-from typing import Text, AsyncGenerator, Dict, Any
+from typing import AsyncGenerator, Dict, Any
 import random
 import string
 import time
@@ -20,14 +20,14 @@ JS_HELPER = JS_DIR / "helper.js"
 
 class JSClient:
     def __init__(
-        self, *, host: Text, port: int, namespace: Text, real_time: bool
+        self, *, host: str, port: int, namespace: str, real_time: bool
     ) -> None:
         self._host = host
         self._port = port
         self._namespace = namespace
         self._real_time = real_time
 
-    def _run(self, method: Text, args: Dict[Text, Any]) -> Dict[Text, Any]:
+    def _run(self, method: str, args: Dict[str, Any]) -> Dict[str, Any]:
         input_data = {
             "host": self._host,
             "port": self._port,
@@ -53,8 +53,8 @@ class JSClient:
         return json.loads(result.stdout)
 
     def send_message(
-        self, queue_name: Text, message: Text, delay: int = compat.DEFAULT_DELAY
-    ) -> Text:
+        self, queue_name: str, message: str, delay: int = compat.DEFAULT_DELAY
+    ) -> str:
         result = self._run(
             "send_message", {"qname": queue_name, "message": message, "delay": delay}
         )
@@ -63,7 +63,7 @@ class JSClient:
 
     def create_queue(
         self,
-        queue_name: Text,
+        queue_name: str,
         vt: int = compat.DEFAULT_VT,
         delay: int = compat.DEFAULT_DELAY,
         max_size: int = compat.DEFAULT_MAX_SIZE,
@@ -74,8 +74,8 @@ class JSClient:
         )
 
     def receive_message(
-        self, queue_name: Text, vt: int = compat.DEFAULT_VT
-    ) -> Dict[Text, Any]:
+        self, queue_name: str, vt: int = compat.DEFAULT_VT
+    ) -> Dict[str, Any]:
         return self._run("receive_message", {"qname": queue_name, "vt": vt})
 
 
@@ -101,18 +101,18 @@ def client(redis_client: aioredis.Redis) -> AIORSMQ:
 
 
 @pytest.fixture
-def qname() -> Text:
+def qname() -> str:
     return "".join([random.choice(string.ascii_lowercase) for _ in range(6)])
 
 
 @pytest.fixture
-def msg_id() -> Text:
+def msg_id() -> str:
     unix_time = int(time.time())
     microseconds = datetime.now().microsecond
     return compat.message_uid(unix_time, microseconds)
 
 
 @pytest.fixture
-async def queue(client: AIORSMQ, qname: Text) -> Text:
+async def queue(client: AIORSMQ, qname: str) -> str:
     await client.create_queue(qname)
     return qname

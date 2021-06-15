@@ -1,4 +1,3 @@
-from typing import Text
 from datetime import datetime
 import random
 import time
@@ -11,12 +10,12 @@ from aiorsmq import compat
 @pytest.mark.parametrize(
     "n, expected", [(0, "0"), (1623361341927, "kprffg13"), (1, "1")]
 )
-def test_base36_encode(n: int, expected: Text):
+def test_base36_encode(n: int, expected: str):
     assert compat.base36_encode(n) == expected
 
 
 @pytest.mark.parametrize("val, expected", [("kprffg13", 1623361341927), ("0", 0)])
-def test_base36_decode(val: Text, expected: int):
+def test_base36_decode(val: str, expected: int):
     assert compat.base36_decode(val) == expected
 
 

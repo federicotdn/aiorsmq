@@ -1,4 +1,3 @@
-from typing import Text
 import uuid
 
 import pytest
@@ -11,7 +10,7 @@ pytestmark = pytest.mark.asyncio
 
 
 async def test_receive_messages_from_rsmq(
-    client: AIORSMQ, js_client: JSClient, queue: Text
+    client: AIORSMQ, js_client: JSClient, queue: str
 ):
     count = 3
 
@@ -32,7 +31,7 @@ async def test_receive_messages_from_rsmq(
 
 
 async def test_receive_messages_from_rsmq_delay(
-    client: AIORSMQ, js_client: JSClient, queue: Text
+    client: AIORSMQ, js_client: JSClient, queue: str
 ):
     js_client.send_message(queue, "foobar", delay=10)
     received = await client.receive_message(queue)
@@ -40,7 +39,7 @@ async def test_receive_messages_from_rsmq_delay(
 
 
 async def test_interact_queue_created_with_rsmq(
-    client: AIORSMQ, js_client: JSClient, qname: Text
+    client: AIORSMQ, js_client: JSClient, qname: str
 ):
     delay = 0
     vt = 15
@@ -60,7 +59,7 @@ async def test_interact_queue_created_with_rsmq(
 
 
 async def test_receive_message_with_rsmq(
-    client: AIORSMQ, js_client: JSClient, queue: Text
+    client: AIORSMQ, js_client: JSClient, queue: str
 ):
     message = uuid.uuid4().hex
     uid = await client.send_message(queue, message)
