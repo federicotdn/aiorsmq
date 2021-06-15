@@ -11,7 +11,7 @@ format-check:
 
 test:
 	docker-compose -f tests/docker-compose.yml up -d
-	pytest tests -vvv
+	pytest tests
 	docker-compose -f tests/docker-compose.yml down
 
 lint:

@@ -5,6 +5,7 @@ from typing import (
     NamedTuple,
     TYPE_CHECKING,
 )
+import re
 
 from aiorsmq import scripts, exceptions, compat, utils
 
@@ -99,6 +100,36 @@ class AIORSMQ:
             scripts.CHANGE_MESSAGE_VISIBILITY
         )
 
+    @staticmethod
+    def _validate(
+        queue_name: Optional[Text] = None,
+        id: Optional[Text] = None,
+        vt: Optional[int] = None,
+        delay: Optional[int] = None,
+        max_size: Optional[int] = None,
+    ) -> None:
+        if queue_name is not None and not re.match(compat.QUEUE_NAME_RE, queue_name):
+            raise exceptions.InvalidValueException("Incorrect format for queue name.")
+
+        if id is not None and not re.match(compat.ID_RE, id):
+            raise exceptions.InvalidValueException("Incorrect format for message ID.")
+
+        if vt is not None and not (compat.MIN_VT <= vt <= compat.MAX_VT):
+            raise exceptions.InvalidValueException("Incorrect value for vt parameter.")
+
+        if delay is not None and not (compat.MIN_DELAY <= delay <= compat.MAX_DELAY):
+            raise exceptions.InvalidValueException(
+                "Incorrect value for delay parameter."
+            )
+
+        if max_size is not None and not (
+            max_size == compat.MAX_SIZE_UNLIMITED
+            or (compat.MIN_MAX_SIZE <= max_size <= compat.MAX_MAX_SIZE)
+        ):
+            raise exceptions.InvalidValueException(
+                "Incorrect value for max_size parameter."
+            )
+
     async def _get_queue_context(
         self, queue_name: Text, add_uid: bool = False
     ) -> _QueueContext:
@@ -139,7 +170,8 @@ class AIORSMQ:
         delay: int = compat.DEFAULT_DELAY,
         max_size: int = compat.DEFAULT_MAX_SIZE,
     ) -> None:
-        # TODO: Validate params
+        self._validate(queue_name=queue_name, vt=vt, delay=delay, max_size=max_size)
+
         key_hash = compat.queue_hash(self._ns, queue_name)
         pipeline = self._client.pipeline()
         now = await self._client.time()
@@ -164,6 +196,8 @@ class AIORSMQ:
         return list(queues)
 
     async def delete_queue(self, queue_name: Text) -> None:
+        self._validate(queue_name=queue_name)
+
         keys = [
             compat.queue_sorted_set(self._ns, queue_name),
             compat.queue_hash(self._ns, queue_name),
@@ -181,6 +215,8 @@ class AIORSMQ:
             )
 
     async def get_queue_attributes(self, queue_name: Text) -> QueueAttributes:
+        self._validate(queue_name=queue_name)
+
         time = await self._client.time()
         key_sorted_set = compat.queue_sorted_set(self._ns, queue_name)
         key_hash = compat.queue_hash(self._ns, queue_name)
@@ -235,6 +271,8 @@ class AIORSMQ:
                 "At least one queue attribute must be specified."
             )
 
+        self._validate(queue_name=queue_name, vt=vt, delay=delay, max_size=max_size)
+
         # Check if the queue exists
         await self._get_queue_context(queue_name)
 
@@ -256,9 +294,18 @@ class AIORSMQ:
     async def send_message(
         self, queue_name: Text, message: Text, delay: Optional[int] = None
     ) -> Text:
-        # TODO: Validate params
+        self._validate(queue_name=queue_name, delay=delay)
+
         context = await self._get_queue_context(queue_name, add_uid=True)
         delay = context.delay if delay is None else delay
+
+        if (
+            context.max_size != compat.MAX_SIZE_UNLIMITED
+            and len(message) > context.max_size
+        ):
+            raise exceptions.InvalidValueException(
+                f"The maximum message length is {context.max_size}."
+            )
 
         key_sorted_set = compat.queue_sorted_set(self._ns, queue_name)
         key_hash = compat.queue_hash(self._ns, queue_name)
@@ -292,7 +339,8 @@ class AIORSMQ:
     async def receive_message(
         self, queue_name: Text, vt: Optional[int] = None
     ) -> Optional[Message]:
-        # TODO: Validate params
+        self._validate(queue_name=queue_name, vt=vt)
+
         context = await self._get_queue_context(queue_name)
         key_sorted_set = compat.queue_sorted_set(self._ns, queue_name)
         vt = context.vt if vt is None else vt
@@ -306,6 +354,8 @@ class AIORSMQ:
         return self._message_from_script_result(result)
 
     async def delete_message(self, queue_name: Text, id: Text) -> None:
+        self._validate(queue_name=queue_name, id=id)
+
         key_sorted_set = compat.queue_sorted_set(self._ns, queue_name)
         key_hash = compat.queue_hash(self._ns, queue_name)
         pipeline = self._client.pipeline()
@@ -320,6 +370,8 @@ class AIORSMQ:
             )
 
     async def pop_message(self, queue_name: Text) -> Optional[Message]:
+        self._validate(queue_name=queue_name)
+
         context = await self._get_queue_context(queue_name)
         key_sorted_set = compat.queue_sorted_set(self._ns, queue_name)
 
@@ -334,7 +386,8 @@ class AIORSMQ:
     async def change_message_visibility(
         self, queue_name: Text, id: Text, vt: int
     ) -> None:
-        # TODO: Validate params
+        self._validate(queue_name=queue_name, vt=vt, id=id)
+
         context = await self._get_queue_context(queue_name)
         key_sorted_set = compat.queue_sorted_set(self._ns, queue_name)
 

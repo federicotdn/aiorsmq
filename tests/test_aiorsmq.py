@@ -4,12 +4,13 @@ import asyncio
 import pytest
 import aioredis  # type: ignore
 
-from aiorsmq import AIORSMQ, compat
+from aiorsmq import AIORSMQ, compat, utils
 from aiorsmq.exceptions import (
     QueueExistsException,
     MessageNotFoundException,
     QueueNotFoundException,
     NoAttributesSpecified,
+    InvalidValueException,
 )
 
 from tests.conftest import TEST_NS  # type: ignore
@@ -28,9 +29,35 @@ async def test_create_queue_failure(client: AIORSMQ, queue: Text):
         await client.create_queue(queue)
 
 
+@pytest.mark.parametrize("name", ["", "a" * 200, "hello!"])
+async def test_create_queue_failure_arg_name(client: AIORSMQ, name: Text):
+    with pytest.raises(InvalidValueException):
+        await client.create_queue(name)
+
+
+@pytest.mark.parametrize("delay", [-1, 10000000000000000])
+async def test_create_queue_failure_arg_delay(client: AIORSMQ, qname: Text, delay: int):
+    with pytest.raises(InvalidValueException):
+        await client.create_queue(qname, delay=delay)
+
+
+@pytest.mark.parametrize("max_size", [-2, 100, 10000000000000000])
+async def test_create_queue_failure_arg_max_size(
+    client: AIORSMQ, qname: Text, max_size: int
+):
+    with pytest.raises(InvalidValueException):
+        await client.create_queue(qname, max_size=max_size)
+
+
 async def test_delete_queue_failure(client: AIORSMQ, qname: Text):
     with pytest.raises(QueueNotFoundException):
         await client.delete_queue(qname)
+
+
+@pytest.mark.parametrize("name", ["", "a" * 200, "hello!"])
+async def test_delete_queue_failure_arg(client: AIORSMQ, name: Text):
+    with pytest.raises(InvalidValueException):
+        await client.delete_queue(name)
 
 
 async def test_delete_queue(client: AIORSMQ, queue: Text):
@@ -52,6 +79,15 @@ async def test_delete_queue_clears_messages(client: AIORSMQ, queue: Text):
 async def test_send_message_failure(client: AIORSMQ, qname: Text):
     with pytest.raises(QueueNotFoundException):
         await client.send_message(qname, "foobar")
+
+
+async def test_send_message_failure_max_size(client: AIORSMQ, queue: Text):
+    await client.set_queue_attributes(queue, max_size=1024)
+
+    message = "a" * 1025
+
+    with pytest.raises(InvalidValueException):
+        await client.send_message(queue, message)
 
 
 async def test_send_message(client: AIORSMQ, queue: Text):
@@ -123,6 +159,18 @@ async def test_receive_message(client: AIORSMQ, queue: Text):
     assert msg.sent > 0
 
 
+async def test_receive_message_sent_order(client: AIORSMQ, queue: Text):
+    count = 3
+
+    for _ in range(count):
+        await client.send_message(queue, "foobar")
+
+    messages = [await client.receive_message(queue) for _ in range(count)]
+
+    for i in range(count - 1):
+        assert utils.ensure(messages[i]).sent < utils.ensure(messages[i + 1]).sent
+
+
 async def test_receive_message_twice_vt(client: AIORSMQ, queue: Text):
     uid = await client.send_message(queue, "foobar")
     msg = await client.receive_message(queue)
@@ -160,6 +208,12 @@ async def test_receive_message_twice_vt_expired_queue_configured(
 async def test_receive_message_failure(client: AIORSMQ, qname: Text):
     with pytest.raises(QueueNotFoundException):
         await client.receive_message(qname)
+
+
+@pytest.mark.parametrize("vt", [-1, 10000000000000])
+async def test_receive_message_failure_arg(client: AIORSMQ, queue: Text, vt: int):
+    with pytest.raises(InvalidValueException):
+        await client.receive_message(queue, vt)
 
 
 async def test_pop_message_fifo_order(client: AIORSMQ, queue: Text):
@@ -261,6 +315,12 @@ async def test_delete_message(client: AIORSMQ, queue: Text):
     assert (await client.get_queue_attributes(queue)).messages == 0
 
 
+@pytest.mark.parametrize("id", ["", "testing", "!" * 32])
+async def test_delete_message_failure_arg(client: AIORSMQ, queue: Text, id: Text):
+    with pytest.raises(InvalidValueException):
+        await client.delete_message(queue, id)
+
+
 async def test_list_queues(client: AIORSMQ, qname: Text):
     queues = await client.list_queues()
     assert queues == []
@@ -291,7 +351,7 @@ async def test_get_queue_attributes_defaults(client: AIORSMQ, queue: Text):
 async def test_get_queue_attributes(client: AIORSMQ, qname: Text):
     vt = 44
     delay = 12
-    max_size = 1000
+    max_size = 2000
     await client.create_queue(qname, vt=vt, delay=delay, max_size=max_size)
     attributes = await client.get_queue_attributes(qname)
 
@@ -330,7 +390,7 @@ async def test_set_queue_attributes_failure(client: AIORSMQ, qname: Text):
 async def test_set_queue_attributes(client: AIORSMQ, queue: Text):
     vt = 44
     delay = 12
-    max_size = 1000
+    max_size = 2000
 
     attributes = await client.set_queue_attributes(queue, vt, delay, max_size)
 
@@ -342,7 +402,7 @@ async def test_set_queue_attributes(client: AIORSMQ, queue: Text):
 async def test_set_queue_attributes_from_new(client: AIORSMQ, qname: Text):
     vt = 44
     delay = 12
-    max_size = 1000
+    max_size = 2000
 
     await client.create_queue(qname, vt=vt)
     await client.set_queue_attributes(qname, delay=delay, max_size=max_size)

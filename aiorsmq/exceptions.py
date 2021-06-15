@@ -16,3 +16,7 @@ class MessageNotFoundException(AIORSMQException):
 
 class NoAttributesSpecified(AIORSMQException):
     """Exception raised when no queue attributes were specified."""
+
+
+class InvalidValueException(AIORSMQException):
+    """Raised when an argument has the right type but its value is out of range."""

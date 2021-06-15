@@ -4,6 +4,17 @@ from typing import Text
 DEFAULT_VT = 30
 DEFAULT_DELAY = 0
 DEFAULT_MAX_SIZE = 65536
+
+MIN_VT = 0
+MIN_DELAY = 0
+MIN_MAX_SIZE = 1024
+
+MAX_VT = 9999999
+MAX_DELAY = 9999999
+MAX_MAX_SIZE = 65536
+
+MAX_SIZE_UNLIMITED = -1
+
 DEFAULT_NAMESPACE = "rsmq"
 TOTAL_SENT = "totalsent"
 TOTAL_RECV = "totalrecv"
@@ -21,6 +32,9 @@ CREATED = "created"
 MODIFIED = "modified"
 RC = "rc"
 FR = "fr"
+
+QUEUE_NAME_RE = r"^([a-zA-Z0-9_-]){1,160}$"
+ID_RE = r"^([a-zA-Z0-9:]){32}$"
 
 BASE36_ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyz"
 
