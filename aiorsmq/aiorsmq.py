@@ -12,26 +12,56 @@ if TYPE_CHECKING:
     from aioredis.client import Redis  # type: ignore
 
 
-class Message(NamedTuple):
+class Message:
     """Represents a message received from a queue."""
 
-    message: Text
-    id: Text
-    fr: int
-    rc: int
-    sent: float
+    __slots__ = ["message", "id", "fr", "rc", "sent"]
+
+    def __init__(
+        self, *, message: Text, id: Text, fr: int, rc: int, sent: float
+    ) -> None:
+        self.message = message
+        self.id = id
+        self.fr = fr
+        self.rc = rc
+        self.sent = sent
 
 
-class QueueAttributes(NamedTuple):
-    vt: int
-    delay: int
-    max_size: int
-    total_recv: int
-    total_sent: int
-    created: int
-    modified: int
-    messages: int
-    hidden_messages: int
+class QueueAttributes:
+    __slots__ = [
+        "vt",
+        "delay",
+        "max_size",
+        "total_recv",
+        "total_sent",
+        "created",
+        "modified",
+        "messages",
+        "hidden_messages",
+    ]
+
+    def __init__(
+        self,
+        *,
+        vt: int,
+        delay: int,
+        max_size: int,
+        total_recv: int,
+        total_sent: int,
+        created: int,
+        modified: int,
+        messages: int,
+        hidden_messages: int,
+    ) -> None:
+        self.vt = vt
+        self.delay = delay
+        self.max_size = max_size
+        self.total_recv = total_recv
+        self.total_sent = total_sent
+        self.created = created
+        self.modified = modified
+        self.messages = messages
+        self.hidden_messages = hidden_messages
 
 
 class _QueueContext(NamedTuple):
