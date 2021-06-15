@@ -1,5 +1,5 @@
-aiorsmq package
-===============
+aiorsmq
+=======
 
 .. automodule:: aiorsmq
    :members: AIORSMQ, Message, QueueAttributes
@@ -7,8 +7,8 @@ aiorsmq package
    :show-inheritance:
 
 
-aiorsmq.exceptions module
-=========================
+aiorsmq.exceptions
+==================
 
 .. automodule:: aiorsmq.exceptions
    :members:

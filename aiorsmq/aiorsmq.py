@@ -3,14 +3,12 @@ from typing import (
     List,
     Optional,
     NamedTuple,
-    TYPE_CHECKING,
 )
 import re
 
-from aiorsmq import scripts, exceptions, compat, utils
+import aioredis  # type: ignore
 
-if TYPE_CHECKING:
-    from aioredis.client import Redis  # type: ignore
+from aiorsmq import scripts, exceptions, compat, utils
 
 
 class Message:
@@ -74,19 +72,31 @@ class _QueueContext(NamedTuple):
 
 
 class AIORSMQ:
+    """Asynchronous Python implementation of the JavaScript `rsmq` (Redis Simple
+    Message Queue) library.
+
+    The `AIORSMQ` class uses a connection to a Redis server to create and
+    delete message queues, as well as send and receive messages. It is the main entry
+    point of the `aiorsmq` package.
+
+    """
+
     def __init__(
         self,
         *,
-        client: "Redis",
+        client: aioredis.Redis,
         ns: Text = compat.DEFAULT_NAMESPACE,
         real_time: bool = False,
     ) -> None:
-        """Initialize a `AIORSMQ` object.
+        """Initialize an `AIORSMQ` object.
 
         Args:
-            client: Redis client to use internally.
+            client: Redis client to use internally (create it using the `aioredis`
+                package).
             ns: Namespace to prefix keys with.
-            real_time: Enable real time mode.
+            real_time: Enable real time mode. When enabled, a notification will be
+                sent using Redis `PUBLISH` each time a message is added to a message
+                queue.
         """
         self._client = client
         self._ns = ns
@@ -170,6 +180,20 @@ class AIORSMQ:
         delay: int = compat.DEFAULT_DELAY,
         max_size: int = compat.DEFAULT_MAX_SIZE,
     ) -> None:
+        """Create a new message queue.
+
+        Args:
+            queue_name: Name of the new message queue.
+            vt: Default visibility delay to use when receiving messages from the queue.
+            delay: Default delay to apply when sending messages to the queue.
+            max_size: Maximum message size for the queue.
+
+        Raises:
+            exceptions.QueueExistsException: When a queue with the given name already
+                exists.
+            exceptions.InvalidValueException: When a given argument contains an invalid
+                value.
+        """
         self._validate(queue_name=queue_name, vt=vt, delay=delay, max_size=max_size)
 
         key_hash = compat.queue_hash(self._ns, queue_name)
@@ -192,6 +216,13 @@ class AIORSMQ:
         await self._client.sadd(compat.queues_set(self._ns), queue_name)
 
     async def list_queues(self) -> List[Text]:
+        """Retrieve a list of all existing queues.
+
+        Note that the namespace is **not** included in the queue names.
+
+        Returns:
+            List of queue names.
+        """
         queues = await self._client.smembers(compat.queues_set(self._ns))
         return list(queues)
 
