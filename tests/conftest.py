@@ -15,6 +15,7 @@ HOST = "localhost"
 PORT = 6379
 TEST_NS = "testing"
 JS_DIR = Path(__file__).parent.resolve() / "js"
+JS_HELPER = JS_DIR / "helper.js"
 
 
 class JSClient:
@@ -38,7 +39,7 @@ class JSClient:
         input_data = {**input_data, **args}
 
         result = subprocess.run(
-            "npm start --silent",
+            f"node {JS_HELPER}",
             capture_output=True,
             shell=True,
             text=True,
@@ -60,6 +61,23 @@ class JSClient:
 
         return result["id"]
 
+    def create_queue(
+        self,
+        queue_name: Text,
+        vt: int = compat.DEFAULT_VT,
+        delay: int = compat.DEFAULT_DELAY,
+        max_size: int = compat.DEFAULT_MAX_SIZE,
+    ) -> None:
+        self._run(
+            "create_queue",
+            {"qname": queue_name, "vt": vt, "delay": delay, "maxsize": max_size},
+        )
+
+    def receive_message(
+        self, queue_name: Text, vt: int = compat.DEFAULT_VT
+    ) -> Dict[Text, Any]:
+        return self._run("receive_message", {"qname": queue_name, "vt": vt})
+
 
 @pytest.fixture()
 def js_client() -> JSClient:
@@ -72,6 +90,8 @@ async def redis_client() -> AsyncGenerator[aioredis.Redis, None]:
         "redis://" + HOST, encoding="utf-8", decode_responses=True
     )
     yield client
+
+    await client.flushall()
     await client.close()
 
 

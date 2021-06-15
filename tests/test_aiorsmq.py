@@ -263,9 +263,10 @@ async def test_delete_message(client: AIORSMQ, queue: Text):
 
 async def test_list_queues(client: AIORSMQ, qname: Text):
     queues = await client.list_queues()
-    await client.create_queue(qname)
+    assert queues == []
 
-    assert sorted(queues + [qname]) == sorted(await client.list_queues())
+    await client.create_queue(qname)
+    assert await client.list_queues() == [qname]
 
 
 async def test_get_queue_attributes_failure(client: AIORSMQ, qname: Text):

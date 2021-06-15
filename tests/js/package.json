@@ -4,8 +4,5 @@
     "version": "0.1.0",
     "dependencies": {
         "rsmq": "^0.12.4"
-    },
-    "scripts": {
-        "start": "node helper.js"
     }
 }

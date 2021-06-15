@@ -10,8 +10,8 @@ switch (data["method"]) {
 case "send_message":
     rsmq.sendMessage({qname: data["qname"], message: data["message"], delay: data["delay"]}, function (err, resp) {
 	    if (err) {
-		    console.error(err)
-		    process.exit(1)
+		    console.error(err);
+		    process.exit(1);
 	    }
 
 	    console.log(JSON.stringify({"id": resp}));
@@ -19,7 +19,32 @@ case "send_message":
     });
     break;
 case "create_queue":
+    rsmq.createQueue({qname: data["qname"], vt: data["vt"], delay: data["delay"], maxsize: data["maxsize"]}, function (err, resp) {
+	    if (err) {
+		    console.error(err);
+            process.exit(1);
+	    }
+
+	    console.log(JSON.stringify({}));
+        process.exit();
+    });
+    break;
+case "receive_message":
+    rsmq.receiveMessage({qname: data["qname"], vt: data["vt"]}, function (err, resp) {
+	    if (err) {
+		    console.error(err);
+            process.exit(1);
+	    }
+
+	    if (resp.id) {
+		    console.log(JSON.stringify(resp));
+	    } else {
+		    console.log(JSON.stringify({}));
+	    }
+
+        process.exit();
+    });
     break;
 default:
-    throw new Error("Unknown method.");
+    throw new Error("Unknown method: " + data["method"]);
 }
