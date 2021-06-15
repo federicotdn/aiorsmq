@@ -350,3 +350,8 @@ async def test_set_queue_attributes_from_new(client: AIORSMQ, qname: Text):
     assert attributes.vt == vt
     assert attributes.delay == delay
     assert attributes.max_size == max_size
+
+
+async def test_quit(client: AIORSMQ):
+    # Should not raise
+    await client.quit()
