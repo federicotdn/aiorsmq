@@ -97,7 +97,7 @@ async def redis_client() -> AsyncGenerator[aioredis.Redis, None]:
 
 @pytest.fixture
 def client(redis_client: aioredis.Redis) -> AIORSMQ:
-    return AIORSMQ(client=redis_client, ns=TEST_NS, real_time=True)
+    return AIORSMQ(client=redis_client, namespace=TEST_NS, real_time=True)
 
 
 @pytest.fixture

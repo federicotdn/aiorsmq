@@ -11,11 +11,26 @@ from aiorsmq import scripts, exceptions, compat, utils
 
 
 class Message:
-    """Represents a message received from a queue."""
+    """Represents a message received from a message queue."""
 
     __slots__ = ["message", "id", "fr", "rc", "sent"]
 
     def __init__(self, *, message: str, id: str, fr: int, rc: int, sent: float) -> None:
+        """Initialize a `Message` object.
+
+        **Note:** This description is provided only for documentation purposes - users
+        of `aiorsmq` have no need for creating `Message` objects manually.
+
+        Args:
+            message: Contents of the message.
+            id: Message's unique ID, consisting of 32 characters. Example:
+                `fzl7ufz2q5iX40Bm9uc0DjQCsqpbQfL3`.
+            fr: UNIX timestamp indicating when the message was first receieved, in
+                milliseconds.
+            rc: Number of times this message has been received by
+                consumers. Will always be at least 1.
+            sent: UNIX timestamp indicating when the message was sent, in milliseconds.
+        """
         self.message = message
         self.id = id
         self.fr = fr
@@ -24,6 +39,8 @@ class Message:
 
 
 class QueueAttributes:
+    """Represents the attributes of a message queue."""
+
     __slots__ = [
         "vt",
         "delay",
@@ -82,7 +99,7 @@ class AIORSMQ:
         self,
         *,
         client: aioredis.Redis,
-        ns: str = compat.DEFAULT_NAMESPACE,
+        namespace: str = compat.DEFAULT_NAMESPACE,
         real_time: bool = False,
     ) -> None:
         """Initialize an `AIORSMQ` object.
@@ -90,13 +107,13 @@ class AIORSMQ:
         Args:
             client: Redis client to use internally (create it using the `aioredis`
                 package).
-            ns: Namespace to prefix keys with.
+            namespace: Namespace to prefix keys with.
             real_time: Enable real time mode. When enabled, a notification will be
                 sent using Redis `PUBLISH` each time a message is added to a message
                 queue.
         """
         self._client = client
-        self._ns = ns
+        self._ns = namespace
         self._real_time = real_time
 
         self._script_pop_message = self._client.register_script(scripts.POP_MESSAGE)
@@ -215,7 +232,7 @@ class AIORSMQ:
     async def list_queues(self) -> List[str]:
         """Retrieve a list of all existing queues.
 
-        Note that the namespace is **not** included in the queue names.
+        **Note:** The namespace is **not** included in the queue names.
 
         Returns:
             List of queue names.
@@ -224,6 +241,16 @@ class AIORSMQ:
         return list(queues)
 
     async def delete_queue(self, queue_name: str) -> None:
+        """Delete a message queue.
+
+        Args:
+            queue_name: Name of the message queue to delete.
+
+        Raises:
+            exceptions.QueueNotFoundException: When the specified queue does not exist.
+            exceptions.InvalidValueException: When a given argument contains an invalid
+                value.
+        """
         self._validate(queue_name=queue_name)
 
         keys = [
@@ -243,6 +270,19 @@ class AIORSMQ:
             )
 
     async def get_queue_attributes(self, queue_name: str) -> QueueAttributes:
+        """Retrieve a message queue's attributes.
+
+        Args:
+            queue_name: Name of the message queue.
+
+        Raises:
+            exceptions.QueueNotFoundException: When the specified queue does not exist.
+            exceptions.InvalidValueException: When a given argument contains an invalid
+                value.
+
+        Returns:
+            Object containing the queue's attributes.
+        """
         self._validate(queue_name=queue_name)
 
         time = await self._client.time()
@@ -294,6 +334,23 @@ class AIORSMQ:
         delay: Optional[int] = None,
         max_size: Optional[int] = None,
     ) -> QueueAttributes:
+        """Update one or more attributes of a message queue.
+
+        Args:
+            queue_name: Name of the message queue.
+            vt: New default visibility delay to use when receiving messages from the
+                queue.
+            delay: New default delay to apply when sending messages to the queue.
+            max_size: New maximum message size for the queue.
+
+        Raises:
+            exceptions.QueueNotFoundException: When the specified queue does not exist.
+            exceptions.InvalidValueException: When a given argument contains an invalid
+                value.
+
+        Returns:
+            Object containing the queue's attributes, including the updated ones.
+        """
         if vt is None and delay is None and max_size is None:
             raise exceptions.NoAttributesSpecified(
                 "At least one queue attribute must be specified."
@@ -322,6 +379,23 @@ class AIORSMQ:
     async def send_message(
         self, queue_name: str, message: str, delay: Optional[int] = None
     ) -> str:
+        """Send a message to a message queue.
+
+        Args:
+            queue_name: Name of the message queue.
+            message: Contents of the message to send.
+            delay: Delay to apply when sending the message. If not specified, the
+                queue's delay value will be used. The message will only be receivable
+                after the delay period has elapsed.
+
+        Raises:
+            exceptions.QueueNotFoundException: When the specified queue does not exist.
+            exceptions.InvalidValueException: When a given argument contains an invalid
+                value.
+
+        Returns:
+            Unique ID of the message sent.
+        """
         self._validate(queue_name=queue_name, delay=delay)
 
         context = await self._get_queue_context(queue_name, add_uid=True)
@@ -367,6 +441,30 @@ class AIORSMQ:
     async def receive_message(
         self, queue_name: str, vt: Optional[int] = None
     ) -> Optional[Message]:
+        """Receive a message from a message queue.
+
+        **Note**: This method will return `None` immediately if the message queue is
+        empty.
+
+        After receiving a message and successfully processing it, make sure to call
+        `delete_message` to ensure you won't receive it again in the future.
+
+        Args:
+            queue_name: Name of the message queue.
+            vt: Visibility timer to use when receving the message. If not specified, the
+                queue's visiblity timer value will be used. After the message has been
+                received, it will be invisible to consumers until the duration visiblity
+                timer period has elapsed.
+
+        Raises:
+            exceptions.QueueNotFoundException: When the specified queue does not exist.
+            exceptions.InvalidValueException: When a given argument contains an invalid
+                value.
+
+        Returns:
+            Message received from the message queue if one was present, `None`
+            otherwise.
+        """
         self._validate(queue_name=queue_name, vt=vt)
 
         context = await self._get_queue_context(queue_name)
@@ -382,6 +480,19 @@ class AIORSMQ:
         return self._message_from_script_result(result)
 
     async def delete_message(self, queue_name: str, id: str) -> None:
+        """Delete a message from a message queue.
+
+        Args:
+            queue_name: Name of the message queue containing the message.
+            id: Message's unique ID.
+
+        Raises:
+            exceptions.QueueNotFoundException: When the specified queue does not exist.
+            exceptions.MessageNotFoundException: When the specified message does not
+                exist.
+            exceptions.InvalidValueException: When a given argument contains an invalid
+                value.
+        """
         self._validate(queue_name=queue_name, id=id)
 
         key_sorted_set = compat.queue_sorted_set(self._ns, queue_name)
@@ -398,6 +509,28 @@ class AIORSMQ:
             )
 
     async def pop_message(self, queue_name: str) -> Optional[Message]:
+        """Receive a message from a message queue and delete it from the queue.
+
+        **Note**: This method will return `None` immediately if the message queue is
+        empty.
+
+        With this method, there is no need to call `delete_message` after receiving a
+        message. However, if an error/exception/crash occurs in your application while
+        processing the message, there is a risk of losing it forever, as it will no
+        longer be stored in the message queue.
+
+        Args:
+            queue_name: Name of the message queue.
+
+        Raises:
+            exceptions.QueueNotFoundException: When the specified queue does not exist.
+            exceptions.InvalidValueException: When a given argument contains an invalid
+                value.
+
+        Returns:
+            Message received from the message queue if one was present, `None`
+            otherwise.
+        """
         self._validate(queue_name=queue_name)
 
         context = await self._get_queue_context(queue_name)
@@ -414,6 +547,22 @@ class AIORSMQ:
     async def change_message_visibility(
         self, queue_name: str, id: str, vt: int
     ) -> None:
+        """Change the visibility timer of a message.
+
+        Args:
+            queue_name: Name of the message queue containing the message.
+            id: Message's unique ID.
+            vt: New visibility timer value to set. The message will be invisible to
+                consumers until the visibility timer period has elapsed, starting from
+                the moment this method was called.
+
+        Raises:
+            exceptions.QueueNotFoundException: When the specified queue does not exist.
+            exceptions.MessageNotFoundException: When the specified message does not
+                exist.
+            exceptions.InvalidValueException: When a given argument contains an invalid
+                value.
+        """
         self._validate(queue_name=queue_name, vt=vt, id=id)
 
         context = await self._get_queue_context(queue_name)
@@ -429,4 +578,9 @@ class AIORSMQ:
             )
 
     async def quit(self) -> None:
+        """Close the connection to the Redis server.
+
+        Internally, this methods just calls the `close` method of the Redis
+        client object specified in the initializator.
+        """
         await self._client.close()
