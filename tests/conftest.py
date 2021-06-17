@@ -40,11 +40,12 @@ class JSClient:
 
         result = subprocess.run(
             f"node {JS_HELPER}",
-            capture_output=True,
             shell=True,
-            text=True,
             cwd=JS_DIR,
             input=json.dumps(input_data),
+            encoding="utf-8",
+            stderr=subprocess.STDOUT,
+            stdout=subprocess.PIPE,
         )
 
         if result.returncode:
