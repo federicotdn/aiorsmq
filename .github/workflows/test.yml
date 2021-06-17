@@ -1,0 +1,44 @@
+name: CI
+on:
+  push:
+    paths-ignore:
+      - '**.md'
+      - 'docs/*'
+  pull_request:
+
+jobs:
+  test:
+    name: Run tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python_version: [3.6, 3.7]
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python_version }}
+      - name: Install dependencies
+        run: pip install -r requirements.txt -r requirements-dev.txt
+      - name: Run pytest
+        run: make test
+
+  lint:
+    name: Run format/linter/types
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python_version: [3.6, 3.7]
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python_version }}
+      - name: Install dependencies
+        run: pip install -r requirements.txt -r requirements-dev.txt
+      - name: Check Black formatting
+        run: make format-check
+      - name: Check flake8 warnings/errors
+        run: make lint
+      - name: Check type errors
+        run: make types
