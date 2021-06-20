@@ -158,7 +158,7 @@ async def test_send_message_bytes(client_bytes: AIORSMQ, queue: str):
 
     received = await client_bytes.receive_message(queue)
     assert received
-    assert received.message == message
+    assert received.contents == message
 
 
 async def test_send_message_bytes_failure_max_size(client_bytes: AIORSMQ, queue: str):
@@ -182,7 +182,7 @@ async def test_receive_message(client: AIORSMQ, queue: str):
     assert msg is not None
 
     assert msg.id == uid
-    assert msg.message == "foobar"
+    assert msg.contents == "foobar"
     assert msg.rc == 1
     assert msg.fr > 0
     assert msg.sent > 0
@@ -216,7 +216,7 @@ async def test_receive_message_twice_vt_expired(client: AIORSMQ, queue: str):
     msg = await client.receive_message(queue)
     assert msg is not None
     assert msg.id == uid
-    assert msg.message == "foobar"
+    assert msg.contents == "foobar"
     assert msg.rc == 2
 
 
@@ -230,7 +230,7 @@ async def test_receive_message_twice_vt_expired_queue_configured(
     msg = await client.receive_message(qname)
     assert msg is not None
     assert msg.id == uid
-    assert msg.message == "foobar"
+    assert msg.contents == "foobar"
     assert msg.rc == 2
 
 
@@ -253,7 +253,7 @@ async def test_pop_message_fifo_order(client: AIORSMQ, queue: str):
     for m in messages:
         received = await client.pop_message(queue)
         assert received is not None
-        assert received.message == m
+        assert received.contents == m
 
 
 async def test_pop_message(client: AIORSMQ, qname: str):
@@ -264,7 +264,7 @@ async def test_pop_message(client: AIORSMQ, qname: str):
     assert msg is not None
 
     assert msg.id == uid
-    assert msg.message == "foobar"
+    assert msg.contents == "foobar"
     assert msg.rc == 1
     assert msg.fr > 0
     assert msg.sent > 0

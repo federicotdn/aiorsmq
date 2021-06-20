@@ -26,7 +26,7 @@ async def test_receive_messages_from_rsmq(
     for i in range(count):
         received = await client.receive_message(queue)
         assert received
-        assert received.message == messages[i]
+        assert received.contents == messages[i]
         assert received.id == ids[i]
 
 

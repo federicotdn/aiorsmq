@@ -14,10 +14,10 @@ from aiorsmq import scripts, exceptions, compat, utils
 class Message:
     """Represents a message received from a message queue."""
 
-    __slots__ = ["message", "id", "fr", "rc", "sent"]
+    __slots__ = ["contents", "id", "fr", "rc", "sent"]
 
     def __init__(
-        self, *, message: Union[str, bytes], id: str, fr: int, rc: int, sent: float
+        self, *, contents: Union[str, bytes], id: str, fr: int, rc: int, sent: float
     ) -> None:
         """Initialize a `Message` object.
 
@@ -25,7 +25,7 @@ class Message:
         of `aiorsmq` have no need for creating `Message` objects manually.
 
         Args:
-            message: Contents of the message.
+            contents: Contents of the message.
             id: Message's unique ID, consisting of 32 characters. Example:
                 `fzl7ufz2q5iX40Bm9uc0DjQCsqpbQfL3`.
             fr: UNIX timestamp indicating when the message was first receieved (in
@@ -34,7 +34,7 @@ class Message:
                 consumers. Will always be at least 1.
             sent: UNIX timestamp indicating when the message was sent (in milliseconds).
         """
-        self.message = message
+        self.contents = contents
         self.id = id
         self.fr = fr
         self.rc = rc
@@ -75,15 +75,19 @@ class QueueAttributes:
         of `aiorsmq` have no need for creating `QueueAttributes` objects manually.
 
         Args:
-            vt:
-            delay:
-            max_size:
-            total_recv:
-            total_sent:
-            created:
-            modified:
-            messaged:
-            hidden_messages:
+            vt: Visibility timer for receiving messages (in seconds).
+            delay: Delay to apply when sending messages (in seconds).
+            max_size: Maximum message size (in bytes).
+            total_recv: Total number of times a message was received from this queue.
+            total_sent: Total number of messages sent to this queue.
+            created: UNIX timestamp indicating when the queue was created (in seconds).
+            modified: UNIX timestamp indicating the last time the queue's attributes
+                were modified (in seconds).
+            messages: Total number of messages currently in the queue, including hidden
+                messages. A message may be hidden because a delay was applied to it when
+                adding it to the queue, or because it was received and so a visibility
+                timer was applied to it.
+            hidden_messages: Total number of hidden messages currently in the queue.
         """
         self.vt = vt
         self.delay = delay
@@ -407,7 +411,7 @@ class AIORSMQ:
 
         return await self.get_queue_attributes(queue_name)
 
-    def _message_length_bytes(self, message: Union[str, bytes]) -> int:
+    def _contents_length_bytes(self, message: Union[str, bytes]) -> int:
         return len(
             message.encode(self._client_encoding)
             if isinstance(message, str)
@@ -415,13 +419,17 @@ class AIORSMQ:
         )
 
     async def send_message(
-        self, queue_name: str, message: Union[str, bytes], delay: Optional[int] = None
+        self, queue_name: str, contents: Union[str, bytes], delay: Optional[int] = None
     ) -> str:
         """Send a message to a message queue.
 
         Args:
             queue_name: Name of the message queue.
-            message: Contents of the message to send.
+            contents: Contents of the message to send. **Note**: If the Redis client was
+                configured with `decode_responses=True`, this parameter should be set to
+                an instance of `str`. Otherwise, `bytes` should be used. This will also
+                affect the contents of the message received when using `receive_message`
+                or `pop_message`.
             delay: Delay to apply when sending the message (in seconds). If not
                 specified, the queue's delay value will be used. The message will only
                 be receivable after the delay period has elapsed.
@@ -441,7 +449,7 @@ class AIORSMQ:
 
         if (
             context.max_size != compat.MAX_SIZE_UNLIMITED
-            and self._message_length_bytes(message) > context.max_size
+            and self._contents_length_bytes(contents) > context.max_size
         ):
             raise exceptions.InvalidValueException(
                 f"The maximum message length in bytes is {context.max_size}."
@@ -453,7 +461,7 @@ class AIORSMQ:
         pipeline = self._client.pipeline()
 
         pipeline.zadd(key_sorted_set, {context.uid: context.ts + delay * 1000})
-        pipeline.hset(key_hash, context.uid, message)
+        pipeline.hset(key_hash, context.uid, contents)
         pipeline.hincrby(key_hash, compat.TOTAL_SENT, 1)
 
         if self._real_time:
@@ -469,7 +477,7 @@ class AIORSMQ:
     @staticmethod
     def _message_from_script_result(result: scripts.MsgRecv) -> Message:
         return Message(
-            message=result[1],
+            contents=result[1],
             id=result[0],
             fr=int(result[3]),
             rc=result[2],
