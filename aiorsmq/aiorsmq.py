@@ -25,11 +25,11 @@ class Message:
             message: Contents of the message.
             id: Message's unique ID, consisting of 32 characters. Example:
                 `fzl7ufz2q5iX40Bm9uc0DjQCsqpbQfL3`.
-            fr: UNIX timestamp indicating when the message was first receieved, in
-                milliseconds.
+            fr: UNIX timestamp indicating when the message was first receieved (in
+                milliseconds).
             rc: Number of times this message has been received by
                 consumers. Will always be at least 1.
-            sent: UNIX timestamp indicating when the message was sent, in milliseconds.
+            sent: UNIX timestamp indicating when the message was sent (in milliseconds).
         """
         self.message = message
         self.id = id
@@ -218,7 +218,7 @@ class AIORSMQ:
                 from the queue.
             delay: Default delay (in seconds) to apply when sending messages to the
                 queue.
-            max_size: Maximum message size for the queue.
+            max_size: Maximum message size for the queue (in bytes).
 
         Raises:
             exceptions.QueueExistsException: When a queue with the given name already
@@ -356,10 +356,11 @@ class AIORSMQ:
 
         Args:
             queue_name: Name of the message queue.
-            vt: New default visibility delay to use when receiving messages from the
+            vt: New default visibility delay (in seconds) to use when receiving messages
+                from the queue.
+            delay: New default delay (in seconds) to apply when sending messages to the
                 queue.
-            delay: New default delay to apply when sending messages to the queue.
-            max_size: New maximum message size for the queue.
+            max_size: New maximum message size for the queue (in bytes).
 
         Raises:
             exceptions.QueueNotFoundException: When the specified queue does not exist.
@@ -402,9 +403,9 @@ class AIORSMQ:
         Args:
             queue_name: Name of the message queue.
             message: Contents of the message to send.
-            delay: Delay to apply when sending the message. If not specified, the
-                queue's delay value will be used. The message will only be receivable
-                after the delay period has elapsed.
+            delay: Delay to apply when sending the message (in seconds). If not
+                specified, the queue's delay value will be used. The message will only
+                be receivable after the delay period has elapsed.
 
         Raises:
             exceptions.QueueNotFoundException: When the specified queue does not exist.
@@ -469,10 +470,10 @@ class AIORSMQ:
 
         Args:
             queue_name: Name of the message queue.
-            vt: Visibility timer to use when receving the message. If not specified, the
-                queue's visiblity timer value will be used. After the message has been
-                received, it will be invisible to consumers until the duration visiblity
-                timer period has elapsed.
+            vt: Visibility timer to use when receving the message (in seconds). If not
+                specified, the queue's visiblity timer value will be used. After the
+                message has been received, it will be invisible to consumers until the
+                duration visiblity timer period has elapsed.
 
         Raises:
             exceptions.QueueNotFoundException: When the specified queue does not exist.
@@ -570,9 +571,9 @@ class AIORSMQ:
         Args:
             queue_name: Name of the message queue containing the message.
             id: Message's unique ID.
-            vt: New visibility timer value to set. The message will be invisible to
-                consumers until the visibility timer period has elapsed, starting from
-                the moment this method was called.
+            vt: New visibility timer value to set (in seconds). The message will be
+                invisible to consumers until the visibility timer period has elapsed,
+                starting from the moment this method was called.
 
         Raises:
             exceptions.QueueNotFoundException: When the specified queue does not exist.
