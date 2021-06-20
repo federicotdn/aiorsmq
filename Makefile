@@ -4,10 +4,10 @@ types:
 	mypy aiorsmq tests
 
 format:
-	black aiorsmq tests
+	black aiorsmq tests setup.py
 
 format-check:
-	black --check aiorsmq tests
+	black --check aiorsmq tests setup.py
 
 test:
 	docker-compose -f tests/docker-compose.yml up -d
@@ -15,7 +15,7 @@ test:
 	docker-compose -f tests/docker-compose.yml down
 
 lint:
-	flake8 aiorsmq tests
+	flake8 aiorsmq tests setup.py
 
 
 html:

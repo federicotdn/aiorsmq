@@ -4,15 +4,19 @@ import pathlib
 here = pathlib.Path(__file__).parent.resolve()
 long_description = (here / "README.md").read_text()
 requirements = (here / "requirements.txt").read_text().splitlines()
+about = {}
+with open(here / "aiorsmq" / "__version__.py") as f:
+    exec(f.read(), about)
 
 setup(
     name="aiorsmq",
-    version="0.1.0",
+    version=about["__version__"],
     description="Async Python implementation of RSMQ.",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/federicotdn/aiorsmq",
     author="Federico Tedin",
+    author_email="federicotedin@gmail.com",
     classifiers=[
         "Intended Audience :: Developers",
         "License :: OSI Approved :: MIT License",

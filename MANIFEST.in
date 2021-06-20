@@ -1,0 +1,2 @@
+recursive-include aiorsmq *.py
+include requirements.txt README.md LICENSE
