@@ -77,3 +77,19 @@ async def test_receive_message_with_rsmq(
 
     received = await client.receive_message(queue)
     assert received is None
+
+
+async def test_delete_message_with_rsmq(
+    client: AIORSMQ, js_client: JSClient, queue: str
+):
+    # Message does not exist
+    assert not js_client.delete_message(queue, "dhoiwpiirm15ce77305a5c3a3b0f230c")
+
+    uid = await client.send_message(queue, "foobar")
+
+    assert js_client.delete_message(queue, uid)
+
+    # We should not be able to receive the message now
+
+    message = await client.receive_message(queue)
+    assert message is None

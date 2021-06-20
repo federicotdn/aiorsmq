@@ -66,6 +66,22 @@ class QueueAttributes:
         messages: int,
         hidden_messages: int,
     ) -> None:
+        """Initialize a `QueueAttributes` object.
+
+        **Note:** This description is provided only for documentation purposes - users
+        of `aiorsmq` have no need for creating `QueueAttributes` objects manually.
+
+        Args:
+            vt:
+            delay:
+            max_size:
+            total_recv:
+            total_sent:
+            created:
+            modified:
+            messaged:
+            hidden_messages:
+        """
         self.vt = vt
         self.delay = delay
         self.max_size = max_size
@@ -198,8 +214,10 @@ class AIORSMQ:
 
         Args:
             queue_name: Name of the new message queue.
-            vt: Default visibility delay to use when receiving messages from the queue.
-            delay: Default delay to apply when sending messages to the queue.
+            vt: Default visibility delay (in seconds) to use when receiving messages
+                from the queue.
+            delay: Default delay (in seconds) to apply when sending messages to the
+                queue.
             max_size: Maximum message size for the queue.
 
         Raises:

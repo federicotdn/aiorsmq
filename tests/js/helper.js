@@ -45,6 +45,17 @@ case "receive_message":
         process.exit();
     });
     break;
+case "delete_message":
+    rsmq.deleteMessage({ qname: data["qname"], id: data["id"] }, function (err, resp) {
+	    if (err) {
+		    console.error(err);
+		    process.exit(1);
+	    }
+
+        console.log(JSON.stringify({"deleted": resp}));
+        process.exit();
+    });
+    break;
 default:
     throw new Error("Unknown method: " + data["method"]);
 }

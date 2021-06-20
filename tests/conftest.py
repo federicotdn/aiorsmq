@@ -79,6 +79,10 @@ class JSClient:
     ) -> Dict[str, Any]:
         return self._run("receive_message", {"qname": queue_name, "vt": vt})
 
+    def delete_message(self, queue_name: str, id: str) -> bool:
+        result = self._run("delete_message", {"qname": queue_name, "id": id})
+        return bool(result["deleted"])
+
 
 @pytest.fixture()
 def js_client() -> JSClient:
