@@ -1,7 +1,8 @@
 # aiorsmq
 [![CI Status](https://github.com/federicotdn/aiorsmq/workflows/CI/badge.svg)](https://github.com/federicotdn/aiorsmq/actions)
 ![Black](https://img.shields.io/badge/code%20style-black-000000.svg)
-![License](https://img.shields.io/github/license/federicotdn/aiorsmq.svg)
+![PyPI](https://img.shields.io/pypi/v/aiorsmq)
+![GitHub](https://img.shields.io/github/license/federicotdn/aiorsmq)
 
 This is the repository for aiorsmq (**A**sync **IO** **RSMQ**), an asynchronous (`async`/`await`) implementation of [RSMQ](https://github.com/smrchy/rsmq) for Python 3.6+. It aims to provide all the features that RSMQ provides, but for Python users.
 
@@ -20,7 +21,7 @@ $ pip install aiorsmq
 ```
 
 ## Documentation
-(todo)
+For examples and API documentation please visit the [documentation pages](https://federicotdn.github.io/aiorsmq/).
 
 ## Related Projects
 For a synchronous implementation of RSMQ for Python, see [PyRSMQ](https://github.com/mlasevich/PyRSMQ).
