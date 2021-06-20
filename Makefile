@@ -22,3 +22,4 @@ html:
 	rm -rf docs-src/build docs
 	cd docs-src && make html
 	cp -r docs-src/build/html docs
+	touch docs/.nojekyll
