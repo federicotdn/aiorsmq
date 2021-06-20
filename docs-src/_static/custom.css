@@ -1,0 +1,11 @@
+.py.class, .py.exception {
+    margin-bottom: 30px;
+}
+
+.py.method {
+    margin-bottom: 20px;
+}
+
+h1 {
+    margin-bottom: 30px !important;
+}

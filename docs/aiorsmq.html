@@ -1,0 +1,505 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>aiorsmq &#8212; aiorsmq 0.1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Welcome to aiorsmq’s documentation!" href="index.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="module-aiorsmq">
+<span id="aiorsmq"></span><h1>aiorsmq<a class="headerlink" href="#module-aiorsmq" title="Permalink to this headline">¶</a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="aiorsmq.AIORSMQ">
+<em class="property"><span class="pre">class</span> </em><span class="sig-name descname"><span class="pre">AIORSMQ</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">client</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">aioredis.client.Redis</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">client_encoding</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">'utf-8'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">namespace</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">'rsmq'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">real_time</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">bool</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/aiorsmq/aiorsmq.html#AIORSMQ"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aiorsmq.AIORSMQ" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Asynchronous Python implementation of the JavaScript <cite>rsmq</cite> (Redis Simple
+Message Queue) library.</p>
+<p>The <cite>AIORSMQ</cite> class uses a connection to a Redis server to create and
+delete message queues, as well as send and receive messages. It is the main entry
+point of the <cite>aiorsmq</cite> package.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="aiorsmq.AIORSMQ.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">client</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">aioredis.client.Redis</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">client_encoding</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">'utf-8'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">namespace</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">'rsmq'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">real_time</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">bool</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">None</span><a class="reference internal" href="_modules/aiorsmq/aiorsmq.html#AIORSMQ.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aiorsmq.AIORSMQ.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize an <cite>AIORSMQ</cite> object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>client</strong> – Redis client to use internally (create it using the <cite>aioredis</cite>
+package).</p></li>
+<li><p><strong>client_encoding</strong> – When the Redis client has been configured with
+<cite>decode_responses=True</cite>, please ensure that the value of this parameter
+matches the encoding used for the Redis client. When the Redis client
+has not been configured with <cite>decode_responses=True</cite>, you may safely
+ignore this parameter. The default encoding used by the Redis client is
+also <cite>utf-8</cite>, so in most cases setting this parameter manually will not
+be necessary.</p></li>
+<li><p><strong>namespace</strong> – Namespace to prefix keys with.</p></li>
+<li><p><strong>real_time</strong> – Enable real time mode. When enabled, a notification will be
+sent using Redis <cite>PUBLISH</cite> each time a message is added to a message
+queue.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aiorsmq.AIORSMQ.change_message_visibility">
+<em class="property"><span class="pre">async</span> </em><span class="sig-name descname"><span class="pre">change_message_visibility</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">queue_name</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">id</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vt</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">None</span><a class="reference internal" href="_modules/aiorsmq/aiorsmq.html#AIORSMQ.change_message_visibility"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aiorsmq.AIORSMQ.change_message_visibility" title="Permalink to this definition">¶</a></dt>
+<dd><p>Change the visibility timer of a message.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>queue_name</strong> – Name of the message queue containing the message.</p></li>
+<li><p><strong>id</strong> – Message’s unique ID.</p></li>
+<li><p><strong>vt</strong> – New visibility timer value to set (in seconds). The message will be
+invisible to consumers until the visibility timer period has elapsed,
+starting from the moment this method was called.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><ul class="simple">
+<li><p><a class="reference internal" href="#aiorsmq.exceptions.QueueNotFoundException" title="aiorsmq.exceptions.QueueNotFoundException"><strong>exceptions.QueueNotFoundException</strong></a> – When the specified queue does not exist.</p></li>
+<li><p><a class="reference internal" href="#aiorsmq.exceptions.MessageNotFoundException" title="aiorsmq.exceptions.MessageNotFoundException"><strong>exceptions.MessageNotFoundException</strong></a> – When the specified message does not
+    exist.</p></li>
+<li><p><a class="reference internal" href="#aiorsmq.exceptions.InvalidValueException" title="aiorsmq.exceptions.InvalidValueException"><strong>exceptions.InvalidValueException</strong></a> – When a given argument contains an invalid
+    value.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aiorsmq.AIORSMQ.create_queue">
+<em class="property"><span class="pre">async</span> </em><span class="sig-name descname"><span class="pre">create_queue</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">queue_name</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vt</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">30</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">delay</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_size</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">65536</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">None</span><a class="reference internal" href="_modules/aiorsmq/aiorsmq.html#AIORSMQ.create_queue"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aiorsmq.AIORSMQ.create_queue" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a new message queue.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>queue_name</strong> – Name of the new message queue.</p></li>
+<li><p><strong>vt</strong> – Default visibility delay (in seconds) to use when receiving messages
+from the queue.</p></li>
+<li><p><strong>delay</strong> – Default delay (in seconds) to apply when sending messages to the
+queue.</p></li>
+<li><p><strong>max_size</strong> – Maximum message size for the queue (in bytes).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><ul class="simple">
+<li><p><a class="reference internal" href="#aiorsmq.exceptions.QueueExistsException" title="aiorsmq.exceptions.QueueExistsException"><strong>exceptions.QueueExistsException</strong></a> – When a queue with the given name already
+    exists.</p></li>
+<li><p><a class="reference internal" href="#aiorsmq.exceptions.InvalidValueException" title="aiorsmq.exceptions.InvalidValueException"><strong>exceptions.InvalidValueException</strong></a> – When a given argument contains an invalid
+    value.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aiorsmq.AIORSMQ.delete_message">
+<em class="property"><span class="pre">async</span> </em><span class="sig-name descname"><span class="pre">delete_message</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">queue_name</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">id</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">None</span><a class="reference internal" href="_modules/aiorsmq/aiorsmq.html#AIORSMQ.delete_message"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aiorsmq.AIORSMQ.delete_message" title="Permalink to this definition">¶</a></dt>
+<dd><p>Delete a message from a message queue.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>queue_name</strong> – Name of the message queue containing the message.</p></li>
+<li><p><strong>id</strong> – Message’s unique ID.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><ul class="simple">
+<li><p><a class="reference internal" href="#aiorsmq.exceptions.QueueNotFoundException" title="aiorsmq.exceptions.QueueNotFoundException"><strong>exceptions.QueueNotFoundException</strong></a> – When the specified queue does not exist.</p></li>
+<li><p><a class="reference internal" href="#aiorsmq.exceptions.MessageNotFoundException" title="aiorsmq.exceptions.MessageNotFoundException"><strong>exceptions.MessageNotFoundException</strong></a> – When the specified message does not
+    exist.</p></li>
+<li><p><a class="reference internal" href="#aiorsmq.exceptions.InvalidValueException" title="aiorsmq.exceptions.InvalidValueException"><strong>exceptions.InvalidValueException</strong></a> – When a given argument contains an invalid
+    value.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aiorsmq.AIORSMQ.delete_queue">
+<em class="property"><span class="pre">async</span> </em><span class="sig-name descname"><span class="pre">delete_queue</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">queue_name</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">None</span><a class="reference internal" href="_modules/aiorsmq/aiorsmq.html#AIORSMQ.delete_queue"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aiorsmq.AIORSMQ.delete_queue" title="Permalink to this definition">¶</a></dt>
+<dd><p>Delete a message queue.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>queue_name</strong> – Name of the message queue to delete.</p>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><ul class="simple">
+<li><p><a class="reference internal" href="#aiorsmq.exceptions.QueueNotFoundException" title="aiorsmq.exceptions.QueueNotFoundException"><strong>exceptions.QueueNotFoundException</strong></a> – When the specified queue does not exist.</p></li>
+<li><p><a class="reference internal" href="#aiorsmq.exceptions.InvalidValueException" title="aiorsmq.exceptions.InvalidValueException"><strong>exceptions.InvalidValueException</strong></a> – When a given argument contains an invalid
+    value.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aiorsmq.AIORSMQ.get_queue_attributes">
+<em class="property"><span class="pre">async</span> </em><span class="sig-name descname"><span class="pre">get_queue_attributes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">queue_name</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> &#x2192; <a class="reference internal" href="#aiorsmq.QueueAttributes" title="aiorsmq.aiorsmq.QueueAttributes"><span class="pre">aiorsmq.aiorsmq.QueueAttributes</span></a><a class="reference internal" href="_modules/aiorsmq/aiorsmq.html#AIORSMQ.get_queue_attributes"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aiorsmq.AIORSMQ.get_queue_attributes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Retrieve a message queue’s attributes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>queue_name</strong> – Name of the message queue.</p>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><ul class="simple">
+<li><p><a class="reference internal" href="#aiorsmq.exceptions.QueueNotFoundException" title="aiorsmq.exceptions.QueueNotFoundException"><strong>exceptions.QueueNotFoundException</strong></a> – When the specified queue does not exist.</p></li>
+<li><p><a class="reference internal" href="#aiorsmq.exceptions.InvalidValueException" title="aiorsmq.exceptions.InvalidValueException"><strong>exceptions.InvalidValueException</strong></a> – When a given argument contains an invalid
+    value.</p></li>
+</ul>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>Object containing the queue’s attributes.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aiorsmq.AIORSMQ.list_queues">
+<em class="property"><span class="pre">async</span> </em><span class="sig-name descname"><span class="pre">list_queues</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><a class="reference internal" href="_modules/aiorsmq/aiorsmq.html#AIORSMQ.list_queues"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aiorsmq.AIORSMQ.list_queues" title="Permalink to this definition">¶</a></dt>
+<dd><p>Retrieve a list of all existing queues.</p>
+<p><strong>Note:</strong> The namespace is <strong>not</strong> included in the queue names.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>List of queue names.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aiorsmq.AIORSMQ.pop_message">
+<em class="property"><span class="pre">async</span> </em><span class="sig-name descname"><span class="pre">pop_message</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">queue_name</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#aiorsmq.Message" title="aiorsmq.aiorsmq.Message"><span class="pre">aiorsmq.aiorsmq.Message</span></a><span class="p"><span class="pre">]</span></span><a class="reference internal" href="_modules/aiorsmq/aiorsmq.html#AIORSMQ.pop_message"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aiorsmq.AIORSMQ.pop_message" title="Permalink to this definition">¶</a></dt>
+<dd><p>Receive a message from a message queue and delete it from the queue.</p>
+<p><strong>Note</strong>: This method will return <cite>None</cite> immediately if the message queue is
+empty.</p>
+<p>With this method, there is no need to call <cite>delete_message</cite> after receiving a
+message. However, if an error/exception/crash occurs in your application while
+processing the message, there is a risk of losing it forever, as it will no
+longer be stored in the message queue.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>queue_name</strong> – Name of the message queue.</p>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><ul class="simple">
+<li><p><a class="reference internal" href="#aiorsmq.exceptions.QueueNotFoundException" title="aiorsmq.exceptions.QueueNotFoundException"><strong>exceptions.QueueNotFoundException</strong></a> – When the specified queue does not exist.</p></li>
+<li><p><a class="reference internal" href="#aiorsmq.exceptions.InvalidValueException" title="aiorsmq.exceptions.InvalidValueException"><strong>exceptions.InvalidValueException</strong></a> – When a given argument contains an invalid
+    value.</p></li>
+</ul>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>Message received from the message queue if one was present, <cite>None</cite>
+otherwise.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aiorsmq.AIORSMQ.quit">
+<em class="property"><span class="pre">async</span> </em><span class="sig-name descname"><span class="pre">quit</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <span class="pre">None</span><a class="reference internal" href="_modules/aiorsmq/aiorsmq.html#AIORSMQ.quit"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aiorsmq.AIORSMQ.quit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Close the connection to the Redis server.</p>
+<p>Internally, this methods just calls the <cite>close</cite> method of the Redis
+client object specified in the initializator.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aiorsmq.AIORSMQ.receive_message">
+<em class="property"><span class="pre">async</span> </em><span class="sig-name descname"><span class="pre">receive_message</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">queue_name</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vt</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#aiorsmq.Message" title="aiorsmq.aiorsmq.Message"><span class="pre">aiorsmq.aiorsmq.Message</span></a><span class="p"><span class="pre">]</span></span><a class="reference internal" href="_modules/aiorsmq/aiorsmq.html#AIORSMQ.receive_message"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aiorsmq.AIORSMQ.receive_message" title="Permalink to this definition">¶</a></dt>
+<dd><p>Receive a message from a message queue.</p>
+<p><strong>Note</strong>: This method will return <cite>None</cite> immediately if the message queue is
+empty.</p>
+<p>After receiving a message and successfully processing it, make sure to call
+<cite>delete_message</cite> to ensure you won’t receive it again in the future.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>queue_name</strong> – Name of the message queue.</p></li>
+<li><p><strong>vt</strong> – Visibility timer to use when receving the message (in seconds). If not
+specified, the queue’s visiblity timer value will be used. After the
+message has been received, it will be invisible to consumers until the
+duration visiblity timer period has elapsed.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><ul class="simple">
+<li><p><a class="reference internal" href="#aiorsmq.exceptions.QueueNotFoundException" title="aiorsmq.exceptions.QueueNotFoundException"><strong>exceptions.QueueNotFoundException</strong></a> – When the specified queue does not exist.</p></li>
+<li><p><a class="reference internal" href="#aiorsmq.exceptions.InvalidValueException" title="aiorsmq.exceptions.InvalidValueException"><strong>exceptions.InvalidValueException</strong></a> – When a given argument contains an invalid
+    value.</p></li>
+</ul>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>Message received from the message queue if one was present, <cite>None</cite>
+otherwise.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aiorsmq.AIORSMQ.send_message">
+<em class="property"><span class="pre">async</span> </em><span class="sig-name descname"><span class="pre">send_message</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">queue_name</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">contents</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span> </span><span class="pre">bytes</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">delay</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">str</span><a class="reference internal" href="_modules/aiorsmq/aiorsmq.html#AIORSMQ.send_message"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aiorsmq.AIORSMQ.send_message" title="Permalink to this definition">¶</a></dt>
+<dd><p>Send a message to a message queue.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>queue_name</strong> – Name of the message queue.</p></li>
+<li><p><strong>contents</strong> – Contents of the message to send. <strong>Note</strong>: If the Redis client was
+configured with <cite>decode_responses=True</cite>, this parameter should be set to
+an instance of <cite>str</cite>. Otherwise, <cite>bytes</cite> should be used. This will also
+affect the contents of the message received when using <cite>receive_message</cite>
+or <cite>pop_message</cite>.</p></li>
+<li><p><strong>delay</strong> – Delay to apply when sending the message (in seconds). If not
+specified, the queue’s delay value will be used. The message will only
+be receivable after the delay period has elapsed.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><ul class="simple">
+<li><p><a class="reference internal" href="#aiorsmq.exceptions.QueueNotFoundException" title="aiorsmq.exceptions.QueueNotFoundException"><strong>exceptions.QueueNotFoundException</strong></a> – When the specified queue does not exist.</p></li>
+<li><p><a class="reference internal" href="#aiorsmq.exceptions.InvalidValueException" title="aiorsmq.exceptions.InvalidValueException"><strong>exceptions.InvalidValueException</strong></a> – When a given argument contains an invalid
+    value.</p></li>
+</ul>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>Unique ID of the message sent.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aiorsmq.AIORSMQ.set_queue_attributes">
+<em class="property"><span class="pre">async</span> </em><span class="sig-name descname"><span class="pre">set_queue_attributes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">queue_name</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vt</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">delay</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_size</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> &#x2192; <a class="reference internal" href="#aiorsmq.QueueAttributes" title="aiorsmq.aiorsmq.QueueAttributes"><span class="pre">aiorsmq.aiorsmq.QueueAttributes</span></a><a class="reference internal" href="_modules/aiorsmq/aiorsmq.html#AIORSMQ.set_queue_attributes"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aiorsmq.AIORSMQ.set_queue_attributes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update one or more attributes of a message queue.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>queue_name</strong> – Name of the message queue.</p></li>
+<li><p><strong>vt</strong> – New default visibility delay (in seconds) to use when receiving messages
+from the queue.</p></li>
+<li><p><strong>delay</strong> – New default delay (in seconds) to apply when sending messages to the
+queue.</p></li>
+<li><p><strong>max_size</strong> – New maximum message size for the queue (in bytes).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><ul class="simple">
+<li><p><a class="reference internal" href="#aiorsmq.exceptions.QueueNotFoundException" title="aiorsmq.exceptions.QueueNotFoundException"><strong>exceptions.QueueNotFoundException</strong></a> – When the specified queue does not exist.</p></li>
+<li><p><a class="reference internal" href="#aiorsmq.exceptions.InvalidValueException" title="aiorsmq.exceptions.InvalidValueException"><strong>exceptions.InvalidValueException</strong></a> – When a given argument contains an invalid
+    value.</p></li>
+</ul>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>Object containing the queue’s attributes, including the updated ones.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="aiorsmq.Message">
+<em class="property"><span class="pre">class</span> </em><span class="sig-name descname"><span class="pre">Message</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">contents</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span> </span><span class="pre">bytes</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">id</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fr</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rc</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sent</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/aiorsmq/aiorsmq.html#Message"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aiorsmq.Message" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Represents a message received from a message queue.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="aiorsmq.Message.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">contents</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span> </span><span class="pre">bytes</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">id</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fr</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rc</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sent</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">None</span><a class="reference internal" href="_modules/aiorsmq/aiorsmq.html#Message.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aiorsmq.Message.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize a <cite>Message</cite> object.</p>
+<p><strong>Note:</strong> This description is provided only for documentation purposes - users
+of <cite>aiorsmq</cite> have no need for creating <cite>Message</cite> objects manually.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>contents</strong> – Contents of the message.</p></li>
+<li><p><strong>id</strong> – Message’s unique ID, consisting of 32 characters. Example:
+<cite>fzl7ufz2q5iX40Bm9uc0DjQCsqpbQfL3</cite>.</p></li>
+<li><p><strong>fr</strong> – UNIX timestamp indicating when the message was first receieved (in
+milliseconds).</p></li>
+<li><p><strong>rc</strong> – Number of times this message has been received by
+consumers. Will always be at least 1.</p></li>
+<li><p><strong>sent</strong> – UNIX timestamp indicating when the message was sent (in milliseconds).</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="aiorsmq.QueueAttributes">
+<em class="property"><span class="pre">class</span> </em><span class="sig-name descname"><span class="pre">QueueAttributes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vt</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">delay</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_size</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">total_recv</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">total_sent</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">created</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">modified</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">messages</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hidden_messages</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/aiorsmq/aiorsmq.html#QueueAttributes"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aiorsmq.QueueAttributes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Represents the attributes of a message queue.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="aiorsmq.QueueAttributes.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vt</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">delay</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_size</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">total_recv</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">total_sent</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">created</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">modified</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">messages</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hidden_messages</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">None</span><a class="reference internal" href="_modules/aiorsmq/aiorsmq.html#QueueAttributes.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aiorsmq.QueueAttributes.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize a <cite>QueueAttributes</cite> object.</p>
+<p><strong>Note:</strong> This description is provided only for documentation purposes - users
+of <cite>aiorsmq</cite> have no need for creating <cite>QueueAttributes</cite> objects manually.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>vt</strong> – Visibility timer for receiving messages (in seconds).</p></li>
+<li><p><strong>delay</strong> – Delay to apply when sending messages (in seconds).</p></li>
+<li><p><strong>max_size</strong> – Maximum message size (in bytes).</p></li>
+<li><p><strong>total_recv</strong> – Total number of times a message was received from this queue.</p></li>
+<li><p><strong>total_sent</strong> – Total number of messages sent to this queue.</p></li>
+<li><p><strong>created</strong> – UNIX timestamp indicating when the queue was created (in seconds).</p></li>
+<li><p><strong>modified</strong> – UNIX timestamp indicating the last time the queue’s attributes
+were modified (in seconds).</p></li>
+<li><p><strong>messages</strong> – Total number of messages currently in the queue, including hidden
+messages. A message may be hidden because a delay was applied to it when
+adding it to the queue, or because it was received and so a visibility
+timer was applied to it.</p></li>
+<li><p><strong>hidden_messages</strong> – Total number of hidden messages currently in the queue.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-aiorsmq.exceptions">
+<span id="aiorsmq-exceptions"></span><h1>aiorsmq.exceptions<a class="headerlink" href="#module-aiorsmq.exceptions" title="Permalink to this headline">¶</a></h1>
+<dl class="py exception">
+<dt class="sig sig-object py" id="aiorsmq.exceptions.AIORSMQException">
+<em class="property"><span class="pre">exception</span> </em><span class="sig-name descname"><span class="pre">AIORSMQException</span></span><a class="reference internal" href="_modules/aiorsmq/exceptions.html#AIORSMQException"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aiorsmq.exceptions.AIORSMQException" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></p>
+<p>Base class for all <cite>aiorsmq</cite> exceptions.</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="aiorsmq.exceptions.InvalidValueException">
+<em class="property"><span class="pre">exception</span> </em><span class="sig-name descname"><span class="pre">InvalidValueException</span></span><a class="reference internal" href="_modules/aiorsmq/exceptions.html#InvalidValueException"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aiorsmq.exceptions.InvalidValueException" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#aiorsmq.exceptions.AIORSMQException" title="aiorsmq.exceptions.AIORSMQException"><code class="xref py py-class docutils literal notranslate"><span class="pre">aiorsmq.exceptions.AIORSMQException</span></code></a></p>
+<p>Raised when an argument has the right type but its value is out of range.</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="aiorsmq.exceptions.MessageNotFoundException">
+<em class="property"><span class="pre">exception</span> </em><span class="sig-name descname"><span class="pre">MessageNotFoundException</span></span><a class="reference internal" href="_modules/aiorsmq/exceptions.html#MessageNotFoundException"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aiorsmq.exceptions.MessageNotFoundException" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#aiorsmq.exceptions.AIORSMQException" title="aiorsmq.exceptions.AIORSMQException"><code class="xref py py-class docutils literal notranslate"><span class="pre">aiorsmq.exceptions.AIORSMQException</span></code></a></p>
+<p>Exception raised when a message does not exist.</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="aiorsmq.exceptions.NoAttributesSpecified">
+<em class="property"><span class="pre">exception</span> </em><span class="sig-name descname"><span class="pre">NoAttributesSpecified</span></span><a class="reference internal" href="_modules/aiorsmq/exceptions.html#NoAttributesSpecified"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aiorsmq.exceptions.NoAttributesSpecified" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#aiorsmq.exceptions.AIORSMQException" title="aiorsmq.exceptions.AIORSMQException"><code class="xref py py-class docutils literal notranslate"><span class="pre">aiorsmq.exceptions.AIORSMQException</span></code></a></p>
+<p>Exception raised when no queue attributes were specified.</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="aiorsmq.exceptions.QueueExistsException">
+<em class="property"><span class="pre">exception</span> </em><span class="sig-name descname"><span class="pre">QueueExistsException</span></span><a class="reference internal" href="_modules/aiorsmq/exceptions.html#QueueExistsException"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aiorsmq.exceptions.QueueExistsException" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#aiorsmq.exceptions.AIORSMQException" title="aiorsmq.exceptions.AIORSMQException"><code class="xref py py-class docutils literal notranslate"><span class="pre">aiorsmq.exceptions.AIORSMQException</span></code></a></p>
+<p>Exception raised when a queue name is already taken.</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="aiorsmq.exceptions.QueueNotFoundException">
+<em class="property"><span class="pre">exception</span> </em><span class="sig-name descname"><span class="pre">QueueNotFoundException</span></span><a class="reference internal" href="_modules/aiorsmq/exceptions.html#QueueNotFoundException"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aiorsmq.exceptions.QueueNotFoundException" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#aiorsmq.exceptions.AIORSMQException" title="aiorsmq.exceptions.AIORSMQException"><code class="xref py py-class docutils literal notranslate"><span class="pre">aiorsmq.exceptions.AIORSMQException</span></code></a></p>
+<p>Exception raised when a queue does not exist.</p>
+</dd></dl>
+
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">aiorsmq</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">aiorsmq</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#module-aiorsmq.exceptions">aiorsmq.exceptions</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="index.html" title="previous chapter">Welcome to aiorsmq’s documentation!</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2021, Federico Tedin.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.0.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/aiorsmq.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

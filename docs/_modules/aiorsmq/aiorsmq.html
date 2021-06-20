@@ -1,0 +1,734 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>aiorsmq.aiorsmq &#8212; aiorsmq 0.1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css" />
+    <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for aiorsmq.aiorsmq</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">List</span><span class="p">,</span>
+    <span class="n">Optional</span><span class="p">,</span>
+    <span class="n">Union</span><span class="p">,</span>
+    <span class="n">NamedTuple</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">import</span> <span class="nn">re</span>
+
+<span class="kn">import</span> <span class="nn">aioredis</span>  <span class="c1"># type: ignore</span>
+
+<span class="kn">from</span> <span class="nn">aiorsmq</span> <span class="kn">import</span> <span class="n">scripts</span><span class="p">,</span> <span class="n">exceptions</span><span class="p">,</span> <span class="n">compat</span><span class="p">,</span> <span class="n">utils</span>
+
+
+<div class="viewcode-block" id="Message"><a class="viewcode-back" href="../../aiorsmq.html#aiorsmq.Message">[docs]</a><span class="k">class</span> <span class="nc">Message</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Represents a message received from a message queue.&quot;&quot;&quot;</span>
+
+    <span class="vm">__slots__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;contents&quot;</span><span class="p">,</span> <span class="s2">&quot;id&quot;</span><span class="p">,</span> <span class="s2">&quot;fr&quot;</span><span class="p">,</span> <span class="s2">&quot;rc&quot;</span><span class="p">,</span> <span class="s2">&quot;sent&quot;</span><span class="p">]</span>
+
+<div class="viewcode-block" id="Message.__init__"><a class="viewcode-back" href="../../aiorsmq.html#aiorsmq.Message.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">contents</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">],</span> <span class="nb">id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">fr</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">rc</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">sent</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Initialize a `Message` object.</span>
+
+<span class="sd">        **Note:** This description is provided only for documentation purposes - users</span>
+<span class="sd">        of `aiorsmq` have no need for creating `Message` objects manually.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            contents: Contents of the message.</span>
+<span class="sd">            id: Message&#39;s unique ID, consisting of 32 characters. Example:</span>
+<span class="sd">                `fzl7ufz2q5iX40Bm9uc0DjQCsqpbQfL3`.</span>
+<span class="sd">            fr: UNIX timestamp indicating when the message was first receieved (in</span>
+<span class="sd">                milliseconds).</span>
+<span class="sd">            rc: Number of times this message has been received by</span>
+<span class="sd">                consumers. Will always be at least 1.</span>
+<span class="sd">            sent: UNIX timestamp indicating when the message was sent (in milliseconds).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">contents</span> <span class="o">=</span> <span class="n">contents</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="nb">id</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fr</span> <span class="o">=</span> <span class="n">fr</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rc</span> <span class="o">=</span> <span class="n">rc</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sent</span> <span class="o">=</span> <span class="n">sent</span></div></div>
+
+
+<div class="viewcode-block" id="QueueAttributes"><a class="viewcode-back" href="../../aiorsmq.html#aiorsmq.QueueAttributes">[docs]</a><span class="k">class</span> <span class="nc">QueueAttributes</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Represents the attributes of a message queue.&quot;&quot;&quot;</span>
+
+    <span class="vm">__slots__</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="s2">&quot;vt&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;delay&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;max_size&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;total_recv&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;total_sent&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;created&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;modified&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;messages&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;hidden_messages&quot;</span><span class="p">,</span>
+    <span class="p">]</span>
+
+<div class="viewcode-block" id="QueueAttributes.__init__"><a class="viewcode-back" href="../../aiorsmq.html#aiorsmq.QueueAttributes.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="o">*</span><span class="p">,</span>
+        <span class="n">vt</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">delay</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">max_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">total_recv</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">total_sent</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">created</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">modified</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">messages</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">hidden_messages</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Initialize a `QueueAttributes` object.</span>
+
+<span class="sd">        **Note:** This description is provided only for documentation purposes - users</span>
+<span class="sd">        of `aiorsmq` have no need for creating `QueueAttributes` objects manually.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            vt: Visibility timer for receiving messages (in seconds).</span>
+<span class="sd">            delay: Delay to apply when sending messages (in seconds).</span>
+<span class="sd">            max_size: Maximum message size (in bytes).</span>
+<span class="sd">            total_recv: Total number of times a message was received from this queue.</span>
+<span class="sd">            total_sent: Total number of messages sent to this queue.</span>
+<span class="sd">            created: UNIX timestamp indicating when the queue was created (in seconds).</span>
+<span class="sd">            modified: UNIX timestamp indicating the last time the queue&#39;s attributes</span>
+<span class="sd">                were modified (in seconds).</span>
+<span class="sd">            messages: Total number of messages currently in the queue, including hidden</span>
+<span class="sd">                messages. A message may be hidden because a delay was applied to it when</span>
+<span class="sd">                adding it to the queue, or because it was received and so a visibility</span>
+<span class="sd">                timer was applied to it.</span>
+<span class="sd">            hidden_messages: Total number of hidden messages currently in the queue.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">vt</span> <span class="o">=</span> <span class="n">vt</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">delay</span> <span class="o">=</span> <span class="n">delay</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_size</span> <span class="o">=</span> <span class="n">max_size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">total_recv</span> <span class="o">=</span> <span class="n">total_recv</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">total_sent</span> <span class="o">=</span> <span class="n">total_sent</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">created</span> <span class="o">=</span> <span class="n">created</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">modified</span> <span class="o">=</span> <span class="n">modified</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">messages</span> <span class="o">=</span> <span class="n">messages</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">hidden_messages</span> <span class="o">=</span> <span class="n">hidden_messages</span></div></div>
+
+
+<span class="k">class</span> <span class="nc">_QueueContext</span><span class="p">(</span><span class="n">NamedTuple</span><span class="p">):</span>
+    <span class="n">vt</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">delay</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">max_size</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">ts</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">uid</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+
+
+<div class="viewcode-block" id="AIORSMQ"><a class="viewcode-back" href="../../aiorsmq.html#aiorsmq.AIORSMQ">[docs]</a><span class="k">class</span> <span class="nc">AIORSMQ</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Asynchronous Python implementation of the JavaScript `rsmq` (Redis Simple</span>
+<span class="sd">    Message Queue) library.</span>
+
+<span class="sd">    The `AIORSMQ` class uses a connection to a Redis server to create and</span>
+<span class="sd">    delete message queues, as well as send and receive messages. It is the main entry</span>
+<span class="sd">    point of the `aiorsmq` package.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="AIORSMQ.__init__"><a class="viewcode-back" href="../../aiorsmq.html#aiorsmq.AIORSMQ.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="o">*</span><span class="p">,</span>
+        <span class="n">client</span><span class="p">:</span> <span class="n">aioredis</span><span class="o">.</span><span class="n">Redis</span><span class="p">,</span>
+        <span class="n">client_encoding</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;utf-8&quot;</span><span class="p">,</span>
+        <span class="n">namespace</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">compat</span><span class="o">.</span><span class="n">DEFAULT_NAMESPACE</span><span class="p">,</span>
+        <span class="n">real_time</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Initialize an `AIORSMQ` object.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            client: Redis client to use internally (create it using the `aioredis`</span>
+<span class="sd">                package).</span>
+<span class="sd">            client_encoding: When the Redis client has been configured with</span>
+<span class="sd">                `decode_responses=True`, please ensure that the value of this parameter</span>
+<span class="sd">                matches the encoding used for the Redis client. When the Redis client</span>
+<span class="sd">                has not been configured with `decode_responses=True`, you may safely</span>
+<span class="sd">                ignore this parameter. The default encoding used by the Redis client is</span>
+<span class="sd">                also `utf-8`, so in most cases setting this parameter manually will not</span>
+<span class="sd">                be necessary.</span>
+<span class="sd">            namespace: Namespace to prefix keys with.</span>
+<span class="sd">            real_time: Enable real time mode. When enabled, a notification will be</span>
+<span class="sd">                sent using Redis `PUBLISH` each time a message is added to a message</span>
+<span class="sd">                queue.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_client</span> <span class="o">=</span> <span class="n">client</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_client_encoding</span> <span class="o">=</span> <span class="n">client_encoding</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_ns</span> <span class="o">=</span> <span class="n">namespace</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_real_time</span> <span class="o">=</span> <span class="n">real_time</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_script_pop_message</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">register_script</span><span class="p">(</span><span class="n">scripts</span><span class="o">.</span><span class="n">POP_MESSAGE</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_script_receive_message</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">register_script</span><span class="p">(</span>
+            <span class="n">scripts</span><span class="o">.</span><span class="n">RECEIVE_MESSAGE</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_script_change_message_visibility</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">register_script</span><span class="p">(</span>
+            <span class="n">scripts</span><span class="o">.</span><span class="n">CHANGE_MESSAGE_VISIBILITY</span>
+        <span class="p">)</span></div>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_validate</span><span class="p">(</span>
+        <span class="n">queue_name</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="nb">id</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">vt</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">delay</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">max_size</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">queue_name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">compat</span><span class="o">.</span><span class="n">QUEUE_NAME_RE</span><span class="p">,</span> <span class="n">queue_name</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">exceptions</span><span class="o">.</span><span class="n">InvalidValueException</span><span class="p">(</span><span class="s2">&quot;Incorrect format for queue name.&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">id</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">compat</span><span class="o">.</span><span class="n">ID_RE</span><span class="p">,</span> <span class="nb">id</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">exceptions</span><span class="o">.</span><span class="n">InvalidValueException</span><span class="p">(</span><span class="s2">&quot;Incorrect format for message ID.&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">vt</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="p">(</span><span class="n">compat</span><span class="o">.</span><span class="n">MIN_VT</span> <span class="o">&lt;=</span> <span class="n">vt</span> <span class="o">&lt;=</span> <span class="n">compat</span><span class="o">.</span><span class="n">MAX_VT</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">exceptions</span><span class="o">.</span><span class="n">InvalidValueException</span><span class="p">(</span><span class="s2">&quot;Incorrect value for vt parameter.&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">delay</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="p">(</span><span class="n">compat</span><span class="o">.</span><span class="n">MIN_DELAY</span> <span class="o">&lt;=</span> <span class="n">delay</span> <span class="o">&lt;=</span> <span class="n">compat</span><span class="o">.</span><span class="n">MAX_DELAY</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">exceptions</span><span class="o">.</span><span class="n">InvalidValueException</span><span class="p">(</span>
+                <span class="s2">&quot;Incorrect value for delay parameter.&quot;</span>
+            <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">max_size</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="p">(</span>
+            <span class="n">max_size</span> <span class="o">==</span> <span class="n">compat</span><span class="o">.</span><span class="n">MAX_SIZE_UNLIMITED</span>
+            <span class="ow">or</span> <span class="p">(</span><span class="n">compat</span><span class="o">.</span><span class="n">MIN_MAX_SIZE</span> <span class="o">&lt;=</span> <span class="n">max_size</span> <span class="o">&lt;=</span> <span class="n">compat</span><span class="o">.</span><span class="n">MAX_MAX_SIZE</span><span class="p">)</span>
+        <span class="p">):</span>
+            <span class="k">raise</span> <span class="n">exceptions</span><span class="o">.</span><span class="n">InvalidValueException</span><span class="p">(</span>
+                <span class="s2">&quot;Incorrect value for max_size parameter.&quot;</span>
+            <span class="p">)</span>
+
+    <span class="k">async</span> <span class="k">def</span> <span class="nf">_get_queue_context</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">queue_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">add_uid</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">_QueueContext</span><span class="p">:</span>
+        <span class="n">key_hash</span> <span class="o">=</span> <span class="n">compat</span><span class="o">.</span><span class="n">queue_hash</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_ns</span><span class="p">,</span> <span class="n">queue_name</span><span class="p">)</span>
+        <span class="n">pipeline</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">pipeline</span><span class="p">()</span>
+
+        <span class="n">pipeline</span><span class="o">.</span><span class="n">hmget</span><span class="p">(</span><span class="n">key_hash</span><span class="p">,</span> <span class="p">[</span><span class="n">compat</span><span class="o">.</span><span class="n">VT</span><span class="p">,</span> <span class="n">compat</span><span class="o">.</span><span class="n">DELAY</span><span class="p">,</span> <span class="n">compat</span><span class="o">.</span><span class="n">MAX_SIZE</span><span class="p">])</span>
+        <span class="n">pipeline</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+
+        <span class="n">result</span> <span class="o">=</span> <span class="k">await</span> <span class="n">pipeline</span><span class="o">.</span><span class="n">execute</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="nb">any</span><span class="p">([</span><span class="n">v</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">]]):</span>
+            <span class="k">raise</span> <span class="n">exceptions</span><span class="o">.</span><span class="n">QueueNotFoundException</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Queue &#39;</span><span class="si">{</span><span class="n">queue_name</span><span class="si">}</span><span class="s2">&#39; does not exist.&quot;</span>
+            <span class="p">)</span>
+
+        <span class="n">unix_time</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">result</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">microseconds</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">result</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="n">uid</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">ts</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="p">(</span><span class="n">unix_time</span> <span class="o">*</span> <span class="mi">1000</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="n">microseconds</span> <span class="o">//</span> <span class="mi">1000</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">add_uid</span><span class="p">:</span>
+            <span class="n">uid</span> <span class="o">=</span> <span class="n">compat</span><span class="o">.</span><span class="n">message_uid</span><span class="p">(</span><span class="n">unix_time</span><span class="p">,</span> <span class="n">microseconds</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">_QueueContext</span><span class="p">(</span>
+            <span class="n">vt</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]),</span>
+            <span class="n">delay</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]),</span>
+            <span class="n">max_size</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">2</span><span class="p">]),</span>
+            <span class="n">ts</span><span class="o">=</span><span class="n">ts</span><span class="p">,</span>
+            <span class="n">uid</span><span class="o">=</span><span class="n">uid</span><span class="p">,</span>
+        <span class="p">)</span>
+
+<div class="viewcode-block" id="AIORSMQ.create_queue"><a class="viewcode-back" href="../../aiorsmq.html#aiorsmq.AIORSMQ.create_queue">[docs]</a>    <span class="k">async</span> <span class="k">def</span> <span class="nf">create_queue</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">queue_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">vt</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">compat</span><span class="o">.</span><span class="n">DEFAULT_VT</span><span class="p">,</span>
+        <span class="n">delay</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">compat</span><span class="o">.</span><span class="n">DEFAULT_DELAY</span><span class="p">,</span>
+        <span class="n">max_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">compat</span><span class="o">.</span><span class="n">DEFAULT_MAX_SIZE</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Create a new message queue.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            queue_name: Name of the new message queue.</span>
+<span class="sd">            vt: Default visibility delay (in seconds) to use when receiving messages</span>
+<span class="sd">                from the queue.</span>
+<span class="sd">            delay: Default delay (in seconds) to apply when sending messages to the</span>
+<span class="sd">                queue.</span>
+<span class="sd">            max_size: Maximum message size for the queue (in bytes).</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            exceptions.QueueExistsException: When a queue with the given name already</span>
+<span class="sd">                exists.</span>
+<span class="sd">            exceptions.InvalidValueException: When a given argument contains an invalid</span>
+<span class="sd">                value.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_validate</span><span class="p">(</span><span class="n">queue_name</span><span class="o">=</span><span class="n">queue_name</span><span class="p">,</span> <span class="n">vt</span><span class="o">=</span><span class="n">vt</span><span class="p">,</span> <span class="n">delay</span><span class="o">=</span><span class="n">delay</span><span class="p">,</span> <span class="n">max_size</span><span class="o">=</span><span class="n">max_size</span><span class="p">)</span>
+
+        <span class="n">key_hash</span> <span class="o">=</span> <span class="n">compat</span><span class="o">.</span><span class="n">queue_hash</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_ns</span><span class="p">,</span> <span class="n">queue_name</span><span class="p">)</span>
+        <span class="n">pipeline</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">pipeline</span><span class="p">()</span>
+        <span class="n">now</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+
+        <span class="n">pipeline</span><span class="o">.</span><span class="n">hsetnx</span><span class="p">(</span><span class="n">key_hash</span><span class="p">,</span> <span class="n">compat</span><span class="o">.</span><span class="n">VT</span><span class="p">,</span> <span class="n">vt</span><span class="p">)</span>
+        <span class="n">pipeline</span><span class="o">.</span><span class="n">hsetnx</span><span class="p">(</span><span class="n">key_hash</span><span class="p">,</span> <span class="n">compat</span><span class="o">.</span><span class="n">DELAY</span><span class="p">,</span> <span class="n">delay</span><span class="p">)</span>
+        <span class="n">pipeline</span><span class="o">.</span><span class="n">hsetnx</span><span class="p">(</span><span class="n">key_hash</span><span class="p">,</span> <span class="n">compat</span><span class="o">.</span><span class="n">MAX_SIZE</span><span class="p">,</span> <span class="n">max_size</span><span class="p">)</span>
+        <span class="n">pipeline</span><span class="o">.</span><span class="n">hsetnx</span><span class="p">(</span><span class="n">key_hash</span><span class="p">,</span> <span class="n">compat</span><span class="o">.</span><span class="n">CREATED</span><span class="p">,</span> <span class="n">now</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">pipeline</span><span class="o">.</span><span class="n">hsetnx</span><span class="p">(</span><span class="n">key_hash</span><span class="p">,</span> <span class="n">compat</span><span class="o">.</span><span class="n">MODIFIED</span><span class="p">,</span> <span class="n">now</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+        <span class="n">result</span> <span class="o">=</span> <span class="k">await</span> <span class="n">pipeline</span><span class="o">.</span><span class="n">execute</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">exceptions</span><span class="o">.</span><span class="n">QueueExistsException</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Queue &#39;</span><span class="si">{</span><span class="n">queue_name</span><span class="si">}</span><span class="s2">&#39; already exists.&quot;</span>
+            <span class="p">)</span>
+
+        <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">sadd</span><span class="p">(</span><span class="n">compat</span><span class="o">.</span><span class="n">queues_set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_ns</span><span class="p">),</span> <span class="n">queue_name</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="AIORSMQ.list_queues"><a class="viewcode-back" href="../../aiorsmq.html#aiorsmq.AIORSMQ.list_queues">[docs]</a>    <span class="k">async</span> <span class="k">def</span> <span class="nf">list_queues</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;Retrieve a list of all existing queues.</span>
+
+<span class="sd">        **Note:** The namespace is **not** included in the queue names.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            List of queue names.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">queues</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">smembers</span><span class="p">(</span><span class="n">compat</span><span class="o">.</span><span class="n">queues_set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_ns</span><span class="p">))</span>
+        <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">queues</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="AIORSMQ.delete_queue"><a class="viewcode-back" href="../../aiorsmq.html#aiorsmq.AIORSMQ.delete_queue">[docs]</a>    <span class="k">async</span> <span class="k">def</span> <span class="nf">delete_queue</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">queue_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Delete a message queue.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            queue_name: Name of the message queue to delete.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            exceptions.QueueNotFoundException: When the specified queue does not exist.</span>
+<span class="sd">            exceptions.InvalidValueException: When a given argument contains an invalid</span>
+<span class="sd">                value.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_validate</span><span class="p">(</span><span class="n">queue_name</span><span class="o">=</span><span class="n">queue_name</span><span class="p">)</span>
+
+        <span class="n">keys</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">compat</span><span class="o">.</span><span class="n">queue_sorted_set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_ns</span><span class="p">,</span> <span class="n">queue_name</span><span class="p">),</span>
+            <span class="n">compat</span><span class="o">.</span><span class="n">queue_hash</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_ns</span><span class="p">,</span> <span class="n">queue_name</span><span class="p">),</span>
+        <span class="p">]</span>
+
+        <span class="n">pipeline</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">pipeline</span><span class="p">()</span>
+        <span class="n">pipeline</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="o">*</span><span class="n">keys</span><span class="p">)</span>
+        <span class="n">pipeline</span><span class="o">.</span><span class="n">srem</span><span class="p">(</span><span class="n">compat</span><span class="o">.</span><span class="n">queues_set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_ns</span><span class="p">),</span> <span class="n">queue_name</span><span class="p">)</span>
+
+        <span class="n">result</span> <span class="o">=</span> <span class="k">await</span> <span class="n">pipeline</span><span class="o">.</span><span class="n">execute</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">exceptions</span><span class="o">.</span><span class="n">QueueNotFoundException</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Queue &#39;</span><span class="si">{</span><span class="n">queue_name</span><span class="si">}</span><span class="s2">&#39; does not exist.&quot;</span>
+            <span class="p">)</span></div>
+
+<div class="viewcode-block" id="AIORSMQ.get_queue_attributes"><a class="viewcode-back" href="../../aiorsmq.html#aiorsmq.AIORSMQ.get_queue_attributes">[docs]</a>    <span class="k">async</span> <span class="k">def</span> <span class="nf">get_queue_attributes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">queue_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">QueueAttributes</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Retrieve a message queue&#39;s attributes.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            queue_name: Name of the message queue.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            exceptions.QueueNotFoundException: When the specified queue does not exist.</span>
+<span class="sd">            exceptions.InvalidValueException: When a given argument contains an invalid</span>
+<span class="sd">                value.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Object containing the queue&#39;s attributes.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_validate</span><span class="p">(</span><span class="n">queue_name</span><span class="o">=</span><span class="n">queue_name</span><span class="p">)</span>
+
+        <span class="n">time</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+        <span class="n">key_sorted_set</span> <span class="o">=</span> <span class="n">compat</span><span class="o">.</span><span class="n">queue_sorted_set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_ns</span><span class="p">,</span> <span class="n">queue_name</span><span class="p">)</span>
+        <span class="n">key_hash</span> <span class="o">=</span> <span class="n">compat</span><span class="o">.</span><span class="n">queue_hash</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_ns</span><span class="p">,</span> <span class="n">queue_name</span><span class="p">)</span>
+        <span class="n">pipeline</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">pipeline</span><span class="p">()</span>
+
+        <span class="n">pipeline</span><span class="o">.</span><span class="n">hmget</span><span class="p">(</span>
+            <span class="n">key_hash</span><span class="p">,</span>
+            <span class="n">compat</span><span class="o">.</span><span class="n">VT</span><span class="p">,</span>
+            <span class="n">compat</span><span class="o">.</span><span class="n">DELAY</span><span class="p">,</span>
+            <span class="n">compat</span><span class="o">.</span><span class="n">MAX_SIZE</span><span class="p">,</span>
+            <span class="n">compat</span><span class="o">.</span><span class="n">TOTAL_RECV</span><span class="p">,</span>
+            <span class="n">compat</span><span class="o">.</span><span class="n">TOTAL_SENT</span><span class="p">,</span>
+            <span class="n">compat</span><span class="o">.</span><span class="n">CREATED</span><span class="p">,</span>
+            <span class="n">compat</span><span class="o">.</span><span class="n">MODIFIED</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">pipeline</span><span class="o">.</span><span class="n">zcard</span><span class="p">(</span><span class="n">key_sorted_set</span><span class="p">)</span>
+
+        <span class="c1"># NOTE: The JavaScript implementation uses only `time[0] * 1000`, which</span>
+        <span class="c1"># implies that sending a message and then retrieving queue attributes</span>
+        <span class="c1"># within the same second might yield incorrect results.</span>
+        <span class="c1"># Using `time[0] * 1000 + time[1] // 1000` would be ideal, but I will</span>
+        <span class="c1"># stick to the original implementation.</span>
+        <span class="n">pipeline</span><span class="o">.</span><span class="n">zcount</span><span class="p">(</span><span class="n">key_sorted_set</span><span class="p">,</span> <span class="n">time</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="mi">1000</span><span class="p">,</span> <span class="s2">&quot;+inf&quot;</span><span class="p">)</span>
+
+        <span class="n">result</span> <span class="o">=</span> <span class="k">await</span> <span class="n">pipeline</span><span class="o">.</span><span class="n">execute</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">exceptions</span><span class="o">.</span><span class="n">QueueNotFoundException</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Queue &#39;</span><span class="si">{</span><span class="n">queue_name</span><span class="si">}</span><span class="s2">&#39; does not exist.&quot;</span>
+            <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">QueueAttributes</span><span class="p">(</span>
+            <span class="n">vt</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]),</span>
+            <span class="n">delay</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]),</span>
+            <span class="n">max_size</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">2</span><span class="p">]),</span>
+            <span class="n">total_recv</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">3</span><span class="p">]</span> <span class="ow">or</span> <span class="mi">0</span><span class="p">),</span>
+            <span class="n">total_sent</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">4</span><span class="p">]</span> <span class="ow">or</span> <span class="mi">0</span><span class="p">),</span>
+            <span class="n">created</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">5</span><span class="p">]),</span>
+            <span class="n">modified</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">6</span><span class="p">]),</span>
+            <span class="n">messages</span><span class="o">=</span><span class="n">result</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+            <span class="n">hidden_messages</span><span class="o">=</span><span class="n">result</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="AIORSMQ.set_queue_attributes"><a class="viewcode-back" href="../../aiorsmq.html#aiorsmq.AIORSMQ.set_queue_attributes">[docs]</a>    <span class="k">async</span> <span class="k">def</span> <span class="nf">set_queue_attributes</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">queue_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">vt</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">delay</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">max_size</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">QueueAttributes</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Update one or more attributes of a message queue.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            queue_name: Name of the message queue.</span>
+<span class="sd">            vt: New default visibility delay (in seconds) to use when receiving messages</span>
+<span class="sd">                from the queue.</span>
+<span class="sd">            delay: New default delay (in seconds) to apply when sending messages to the</span>
+<span class="sd">                queue.</span>
+<span class="sd">            max_size: New maximum message size for the queue (in bytes).</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            exceptions.QueueNotFoundException: When the specified queue does not exist.</span>
+<span class="sd">            exceptions.InvalidValueException: When a given argument contains an invalid</span>
+<span class="sd">                value.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Object containing the queue&#39;s attributes, including the updated ones.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">vt</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">delay</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">max_size</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">exceptions</span><span class="o">.</span><span class="n">NoAttributesSpecified</span><span class="p">(</span>
+                <span class="s2">&quot;At least one queue attribute must be specified.&quot;</span>
+            <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_validate</span><span class="p">(</span><span class="n">queue_name</span><span class="o">=</span><span class="n">queue_name</span><span class="p">,</span> <span class="n">vt</span><span class="o">=</span><span class="n">vt</span><span class="p">,</span> <span class="n">delay</span><span class="o">=</span><span class="n">delay</span><span class="p">,</span> <span class="n">max_size</span><span class="o">=</span><span class="n">max_size</span><span class="p">)</span>
+
+        <span class="c1"># Check if the queue exists</span>
+        <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_queue_context</span><span class="p">(</span><span class="n">queue_name</span><span class="p">)</span>
+
+        <span class="n">key_hash</span> <span class="o">=</span> <span class="n">compat</span><span class="o">.</span><span class="n">queue_hash</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_ns</span><span class="p">,</span> <span class="n">queue_name</span><span class="p">)</span>
+
+        <span class="n">time</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+        <span class="n">pipeline</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">pipeline</span><span class="p">()</span>
+
+        <span class="n">pipeline</span><span class="o">.</span><span class="n">hset</span><span class="p">(</span><span class="n">key_hash</span><span class="p">,</span> <span class="n">compat</span><span class="o">.</span><span class="n">MODIFIED</span><span class="p">,</span> <span class="n">time</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">attributes</span> <span class="o">=</span> <span class="p">{</span><span class="n">compat</span><span class="o">.</span><span class="n">VT</span><span class="p">:</span> <span class="n">vt</span><span class="p">,</span> <span class="n">compat</span><span class="o">.</span><span class="n">DELAY</span><span class="p">:</span> <span class="n">delay</span><span class="p">,</span> <span class="n">compat</span><span class="o">.</span><span class="n">MAX_SIZE</span><span class="p">:</span> <span class="n">max_size</span><span class="p">}</span>
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">attributes</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">v</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">pipeline</span><span class="o">.</span><span class="n">hset</span><span class="p">(</span><span class="n">key_hash</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span>
+
+        <span class="k">await</span> <span class="n">pipeline</span><span class="o">.</span><span class="n">execute</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_queue_attributes</span><span class="p">(</span><span class="n">queue_name</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">_contents_length_bytes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span>
+            <span class="n">message</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_client_encoding</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">message</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span>
+            <span class="k">else</span> <span class="n">message</span>
+        <span class="p">)</span>
+
+<div class="viewcode-block" id="AIORSMQ.send_message"><a class="viewcode-back" href="../../aiorsmq.html#aiorsmq.AIORSMQ.send_message">[docs]</a>    <span class="k">async</span> <span class="k">def</span> <span class="nf">send_message</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">queue_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">contents</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">],</span> <span class="n">delay</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Send a message to a message queue.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            queue_name: Name of the message queue.</span>
+<span class="sd">            contents: Contents of the message to send. **Note**: If the Redis client was</span>
+<span class="sd">                configured with `decode_responses=True`, this parameter should be set to</span>
+<span class="sd">                an instance of `str`. Otherwise, `bytes` should be used. This will also</span>
+<span class="sd">                affect the contents of the message received when using `receive_message`</span>
+<span class="sd">                or `pop_message`.</span>
+<span class="sd">            delay: Delay to apply when sending the message (in seconds). If not</span>
+<span class="sd">                specified, the queue&#39;s delay value will be used. The message will only</span>
+<span class="sd">                be receivable after the delay period has elapsed.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            exceptions.QueueNotFoundException: When the specified queue does not exist.</span>
+<span class="sd">            exceptions.InvalidValueException: When a given argument contains an invalid</span>
+<span class="sd">                value.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Unique ID of the message sent.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_validate</span><span class="p">(</span><span class="n">queue_name</span><span class="o">=</span><span class="n">queue_name</span><span class="p">,</span> <span class="n">delay</span><span class="o">=</span><span class="n">delay</span><span class="p">)</span>
+
+        <span class="n">context</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_queue_context</span><span class="p">(</span><span class="n">queue_name</span><span class="p">,</span> <span class="n">add_uid</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">delay</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">delay</span> <span class="k">if</span> <span class="n">delay</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">delay</span>
+
+        <span class="k">if</span> <span class="p">(</span>
+            <span class="n">context</span><span class="o">.</span><span class="n">max_size</span> <span class="o">!=</span> <span class="n">compat</span><span class="o">.</span><span class="n">MAX_SIZE_UNLIMITED</span>
+            <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_contents_length_bytes</span><span class="p">(</span><span class="n">contents</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">context</span><span class="o">.</span><span class="n">max_size</span>
+        <span class="p">):</span>
+            <span class="k">raise</span> <span class="n">exceptions</span><span class="o">.</span><span class="n">InvalidValueException</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;The maximum message length in bytes is </span><span class="si">{</span><span class="n">context</span><span class="o">.</span><span class="n">max_size</span><span class="si">}</span><span class="s2">.&quot;</span>
+            <span class="p">)</span>
+
+        <span class="n">key_sorted_set</span> <span class="o">=</span> <span class="n">compat</span><span class="o">.</span><span class="n">queue_sorted_set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_ns</span><span class="p">,</span> <span class="n">queue_name</span><span class="p">)</span>
+        <span class="n">key_hash</span> <span class="o">=</span> <span class="n">compat</span><span class="o">.</span><span class="n">queue_hash</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_ns</span><span class="p">,</span> <span class="n">queue_name</span><span class="p">)</span>
+
+        <span class="n">pipeline</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">pipeline</span><span class="p">()</span>
+
+        <span class="n">pipeline</span><span class="o">.</span><span class="n">zadd</span><span class="p">(</span><span class="n">key_sorted_set</span><span class="p">,</span> <span class="p">{</span><span class="n">context</span><span class="o">.</span><span class="n">uid</span><span class="p">:</span> <span class="n">context</span><span class="o">.</span><span class="n">ts</span> <span class="o">+</span> <span class="n">delay</span> <span class="o">*</span> <span class="mi">1000</span><span class="p">})</span>
+        <span class="n">pipeline</span><span class="o">.</span><span class="n">hset</span><span class="p">(</span><span class="n">key_hash</span><span class="p">,</span> <span class="n">context</span><span class="o">.</span><span class="n">uid</span><span class="p">,</span> <span class="n">contents</span><span class="p">)</span>
+        <span class="n">pipeline</span><span class="o">.</span><span class="n">hincrby</span><span class="p">(</span><span class="n">key_hash</span><span class="p">,</span> <span class="n">compat</span><span class="o">.</span><span class="n">TOTAL_SENT</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_real_time</span><span class="p">:</span>
+            <span class="n">pipeline</span><span class="o">.</span><span class="n">zcard</span><span class="p">(</span><span class="n">key_sorted_set</span><span class="p">)</span>
+
+        <span class="n">result</span> <span class="o">=</span> <span class="k">await</span> <span class="n">pipeline</span><span class="o">.</span><span class="n">execute</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_real_time</span><span class="p">:</span>
+            <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">publish</span><span class="p">(</span><span class="n">compat</span><span class="o">.</span><span class="n">queue_rt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_ns</span><span class="p">,</span> <span class="n">queue_name</span><span class="p">),</span> <span class="n">result</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span>
+
+        <span class="k">return</span> <span class="n">utils</span><span class="o">.</span><span class="n">ensure</span><span class="p">(</span><span class="n">context</span><span class="o">.</span><span class="n">uid</span><span class="p">)</span></div>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_message_from_script_result</span><span class="p">(</span><span class="n">result</span><span class="p">:</span> <span class="n">scripts</span><span class="o">.</span><span class="n">MsgRecv</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Message</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">Message</span><span class="p">(</span>
+            <span class="n">contents</span><span class="o">=</span><span class="n">result</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+            <span class="nb">id</span><span class="o">=</span><span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+            <span class="n">fr</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="mi">3</span><span class="p">]),</span>
+            <span class="n">rc</span><span class="o">=</span><span class="n">result</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span>
+            <span class="n">sent</span><span class="o">=</span><span class="n">compat</span><span class="o">.</span><span class="n">base36_decode</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">][:</span><span class="mi">10</span><span class="p">])</span> <span class="o">/</span> <span class="mi">1000</span><span class="p">,</span>
+        <span class="p">)</span>
+
+<div class="viewcode-block" id="AIORSMQ.receive_message"><a class="viewcode-back" href="../../aiorsmq.html#aiorsmq.AIORSMQ.receive_message">[docs]</a>    <span class="k">async</span> <span class="k">def</span> <span class="nf">receive_message</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">queue_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">vt</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Message</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;Receive a message from a message queue.</span>
+
+<span class="sd">        **Note**: This method will return `None` immediately if the message queue is</span>
+<span class="sd">        empty.</span>
+
+<span class="sd">        After receiving a message and successfully processing it, make sure to call</span>
+<span class="sd">        `delete_message` to ensure you won&#39;t receive it again in the future.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            queue_name: Name of the message queue.</span>
+<span class="sd">            vt: Visibility timer to use when receving the message (in seconds). If not</span>
+<span class="sd">                specified, the queue&#39;s visiblity timer value will be used. After the</span>
+<span class="sd">                message has been received, it will be invisible to consumers until the</span>
+<span class="sd">                duration visiblity timer period has elapsed.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            exceptions.QueueNotFoundException: When the specified queue does not exist.</span>
+<span class="sd">            exceptions.InvalidValueException: When a given argument contains an invalid</span>
+<span class="sd">                value.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Message received from the message queue if one was present, `None`</span>
+<span class="sd">            otherwise.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_validate</span><span class="p">(</span><span class="n">queue_name</span><span class="o">=</span><span class="n">queue_name</span><span class="p">,</span> <span class="n">vt</span><span class="o">=</span><span class="n">vt</span><span class="p">)</span>
+
+        <span class="n">context</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_queue_context</span><span class="p">(</span><span class="n">queue_name</span><span class="p">)</span>
+        <span class="n">key_sorted_set</span> <span class="o">=</span> <span class="n">compat</span><span class="o">.</span><span class="n">queue_sorted_set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_ns</span><span class="p">,</span> <span class="n">queue_name</span><span class="p">)</span>
+        <span class="n">vt</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">vt</span> <span class="k">if</span> <span class="n">vt</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">vt</span>
+
+        <span class="n">result</span><span class="p">:</span> <span class="n">scripts</span><span class="o">.</span><span class="n">MsgRecv</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_script_receive_message</span><span class="p">(</span>
+            <span class="n">keys</span><span class="o">=</span><span class="p">[</span><span class="n">key_sorted_set</span><span class="p">,</span> <span class="n">context</span><span class="o">.</span><span class="n">ts</span><span class="p">,</span> <span class="n">context</span><span class="o">.</span><span class="n">ts</span> <span class="o">+</span> <span class="n">vt</span> <span class="o">*</span> <span class="mi">1000</span><span class="p">]</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">result</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_message_from_script_result</span><span class="p">(</span><span class="n">result</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="AIORSMQ.delete_message"><a class="viewcode-back" href="../../aiorsmq.html#aiorsmq.AIORSMQ.delete_message">[docs]</a>    <span class="k">async</span> <span class="k">def</span> <span class="nf">delete_message</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">queue_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Delete a message from a message queue.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            queue_name: Name of the message queue containing the message.</span>
+<span class="sd">            id: Message&#39;s unique ID.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            exceptions.QueueNotFoundException: When the specified queue does not exist.</span>
+<span class="sd">            exceptions.MessageNotFoundException: When the specified message does not</span>
+<span class="sd">                exist.</span>
+<span class="sd">            exceptions.InvalidValueException: When a given argument contains an invalid</span>
+<span class="sd">                value.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_validate</span><span class="p">(</span><span class="n">queue_name</span><span class="o">=</span><span class="n">queue_name</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">)</span>
+
+        <span class="n">key_sorted_set</span> <span class="o">=</span> <span class="n">compat</span><span class="o">.</span><span class="n">queue_sorted_set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_ns</span><span class="p">,</span> <span class="n">queue_name</span><span class="p">)</span>
+        <span class="n">key_hash</span> <span class="o">=</span> <span class="n">compat</span><span class="o">.</span><span class="n">queue_hash</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_ns</span><span class="p">,</span> <span class="n">queue_name</span><span class="p">)</span>
+        <span class="n">pipeline</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">pipeline</span><span class="p">()</span>
+
+        <span class="n">pipeline</span><span class="o">.</span><span class="n">zrem</span><span class="p">(</span><span class="n">key_sorted_set</span><span class="p">,</span> <span class="nb">id</span><span class="p">)</span>
+        <span class="n">pipeline</span><span class="o">.</span><span class="n">hdel</span><span class="p">(</span><span class="n">key_hash</span><span class="p">,</span> <span class="nb">id</span><span class="p">,</span> <span class="n">compat</span><span class="o">.</span><span class="n">message_rc</span><span class="p">(</span><span class="nb">id</span><span class="p">),</span> <span class="n">compat</span><span class="o">.</span><span class="n">message_fr</span><span class="p">(</span><span class="nb">id</span><span class="p">))</span>
+
+        <span class="n">result</span> <span class="o">=</span> <span class="k">await</span> <span class="n">pipeline</span><span class="o">.</span><span class="n">execute</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">result</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">exceptions</span><span class="o">.</span><span class="n">MessageNotFoundException</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Message with ID &#39;</span><span class="si">{</span><span class="nb">id</span><span class="si">}</span><span class="s2">&#39; does not exist.&quot;</span>
+            <span class="p">)</span></div>
+
+<div class="viewcode-block" id="AIORSMQ.pop_message"><a class="viewcode-back" href="../../aiorsmq.html#aiorsmq.AIORSMQ.pop_message">[docs]</a>    <span class="k">async</span> <span class="k">def</span> <span class="nf">pop_message</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">queue_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Message</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;Receive a message from a message queue and delete it from the queue.</span>
+
+<span class="sd">        **Note**: This method will return `None` immediately if the message queue is</span>
+<span class="sd">        empty.</span>
+
+<span class="sd">        With this method, there is no need to call `delete_message` after receiving a</span>
+<span class="sd">        message. However, if an error/exception/crash occurs in your application while</span>
+<span class="sd">        processing the message, there is a risk of losing it forever, as it will no</span>
+<span class="sd">        longer be stored in the message queue.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            queue_name: Name of the message queue.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            exceptions.QueueNotFoundException: When the specified queue does not exist.</span>
+<span class="sd">            exceptions.InvalidValueException: When a given argument contains an invalid</span>
+<span class="sd">                value.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Message received from the message queue if one was present, `None`</span>
+<span class="sd">            otherwise.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_validate</span><span class="p">(</span><span class="n">queue_name</span><span class="o">=</span><span class="n">queue_name</span><span class="p">)</span>
+
+        <span class="n">context</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_queue_context</span><span class="p">(</span><span class="n">queue_name</span><span class="p">)</span>
+        <span class="n">key_sorted_set</span> <span class="o">=</span> <span class="n">compat</span><span class="o">.</span><span class="n">queue_sorted_set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_ns</span><span class="p">,</span> <span class="n">queue_name</span><span class="p">)</span>
+
+        <span class="n">result</span><span class="p">:</span> <span class="n">scripts</span><span class="o">.</span><span class="n">MsgRecv</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_script_pop_message</span><span class="p">(</span>
+            <span class="n">keys</span><span class="o">=</span><span class="p">[</span><span class="n">key_sorted_set</span><span class="p">,</span> <span class="n">context</span><span class="o">.</span><span class="n">ts</span><span class="p">]</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">result</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_message_from_script_result</span><span class="p">(</span><span class="n">result</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="AIORSMQ.change_message_visibility"><a class="viewcode-back" href="../../aiorsmq.html#aiorsmq.AIORSMQ.change_message_visibility">[docs]</a>    <span class="k">async</span> <span class="k">def</span> <span class="nf">change_message_visibility</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">queue_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">vt</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Change the visibility timer of a message.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            queue_name: Name of the message queue containing the message.</span>
+<span class="sd">            id: Message&#39;s unique ID.</span>
+<span class="sd">            vt: New visibility timer value to set (in seconds). The message will be</span>
+<span class="sd">                invisible to consumers until the visibility timer period has elapsed,</span>
+<span class="sd">                starting from the moment this method was called.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            exceptions.QueueNotFoundException: When the specified queue does not exist.</span>
+<span class="sd">            exceptions.MessageNotFoundException: When the specified message does not</span>
+<span class="sd">                exist.</span>
+<span class="sd">            exceptions.InvalidValueException: When a given argument contains an invalid</span>
+<span class="sd">                value.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_validate</span><span class="p">(</span><span class="n">queue_name</span><span class="o">=</span><span class="n">queue_name</span><span class="p">,</span> <span class="n">vt</span><span class="o">=</span><span class="n">vt</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">)</span>
+
+        <span class="n">context</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_queue_context</span><span class="p">(</span><span class="n">queue_name</span><span class="p">)</span>
+        <span class="n">key_sorted_set</span> <span class="o">=</span> <span class="n">compat</span><span class="o">.</span><span class="n">queue_sorted_set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_ns</span><span class="p">,</span> <span class="n">queue_name</span><span class="p">)</span>
+
+        <span class="n">result</span><span class="p">:</span> <span class="n">scripts</span><span class="o">.</span><span class="n">MsgVisibility</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_script_change_message_visibility</span><span class="p">(</span>
+            <span class="n">keys</span><span class="o">=</span><span class="p">[</span><span class="n">key_sorted_set</span><span class="p">,</span> <span class="nb">id</span><span class="p">,</span> <span class="n">context</span><span class="o">.</span><span class="n">ts</span> <span class="o">+</span> <span class="n">vt</span> <span class="o">*</span> <span class="mi">1000</span><span class="p">]</span>
+        <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">result</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">exceptions</span><span class="o">.</span><span class="n">MessageNotFoundException</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Message with ID &#39;</span><span class="si">{</span><span class="nb">id</span><span class="si">}</span><span class="s2">&#39; does not exist.&quot;</span>
+            <span class="p">)</span></div>
+
+<div class="viewcode-block" id="AIORSMQ.quit"><a class="viewcode-back" href="../../aiorsmq.html#aiorsmq.AIORSMQ.quit">[docs]</a>    <span class="k">async</span> <span class="k">def</span> <span class="nf">quit</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Close the connection to the Redis server.</span>
+
+<span class="sd">        Internally, this methods just calls the `close` method of the Redis</span>
+<span class="sd">        client object specified in the initializator.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">aiorsmq</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../aiorsmq.html">aiorsmq</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../aiorsmq.html#module-aiorsmq.exceptions">aiorsmq.exceptions</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2021, Federico Tedin.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.0.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>
