@@ -27,4 +27,6 @@ setup(
     python_requires=">=3.6, <4",
     install_requires=requirements,
     project_urls={"Bug Reports": "https://github.com/federicotdn/aiorsmq/issues"},
+    download_url=f"https://github.com/federicotdn/aiorsmq"
+    f"/archive/refs/tags/{about['__version__']}.zip",
 )
