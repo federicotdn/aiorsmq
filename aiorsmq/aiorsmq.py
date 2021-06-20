@@ -1,6 +1,7 @@
 from typing import (
     List,
     Optional,
+    Union,
     NamedTuple,
 )
 import re
@@ -15,7 +16,9 @@ class Message:
 
     __slots__ = ["message", "id", "fr", "rc", "sent"]
 
-    def __init__(self, *, message: str, id: str, fr: int, rc: int, sent: float) -> None:
+    def __init__(
+        self, *, message: Union[str, bytes], id: str, fr: int, rc: int, sent: float
+    ) -> None:
         """Initialize a `Message` object.
 
         **Note:** This description is provided only for documentation purposes - users
@@ -115,6 +118,7 @@ class AIORSMQ:
         self,
         *,
         client: aioredis.Redis,
+        client_encoding: str = "utf-8",
         namespace: str = compat.DEFAULT_NAMESPACE,
         real_time: bool = False,
     ) -> None:
@@ -123,12 +127,20 @@ class AIORSMQ:
         Args:
             client: Redis client to use internally (create it using the `aioredis`
                 package).
+            client_encoding: When the Redis client has been configured with
+                `decode_responses=True`, please ensure that the value of this parameter
+                matches the encoding used for the Redis client. When the Redis client
+                has not been configured with `decode_responses=True`, you may safely
+                ignore this parameter. The default encoding used by the Redis client is
+                also `utf-8`, so in most cases setting this parameter manually will not
+                be necessary.
             namespace: Namespace to prefix keys with.
             real_time: Enable real time mode. When enabled, a notification will be
                 sent using Redis `PUBLISH` each time a message is added to a message
                 queue.
         """
         self._client = client
+        self._client_encoding = client_encoding
         self._ns = namespace
         self._real_time = real_time
 
@@ -395,8 +407,15 @@ class AIORSMQ:
 
         return await self.get_queue_attributes(queue_name)
 
+    def _message_length_bytes(self, message: Union[str, bytes]) -> int:
+        return len(
+            message.encode(self._client_encoding)
+            if isinstance(message, str)
+            else message
+        )
+
     async def send_message(
-        self, queue_name: str, message: str, delay: Optional[int] = None
+        self, queue_name: str, message: Union[str, bytes], delay: Optional[int] = None
     ) -> str:
         """Send a message to a message queue.
 
@@ -422,10 +441,10 @@ class AIORSMQ:
 
         if (
             context.max_size != compat.MAX_SIZE_UNLIMITED
-            and len(message) > context.max_size
+            and self._message_length_bytes(message) > context.max_size
         ):
             raise exceptions.InvalidValueException(
-                f"The maximum message length is {context.max_size}."
+                f"The maximum message length in bytes is {context.max_size}."
             )
 
         key_sorted_set = compat.queue_sorted_set(self._ns, queue_name)

@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Tuple, Union
 
 # Taken from:
 #   https://github.com/smrchy/rsmq/blob/master/_src/index.ts
@@ -47,5 +47,5 @@ redis.call("ZADD", KEYS[1], KEYS[3], KEYS[2])
 return 1"""
 
 
-MsgRecv = Tuple[str, str, int, str]
+MsgRecv = Tuple[str, Union[str, bytes], int, str]
 MsgVisibility = int

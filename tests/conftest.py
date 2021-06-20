@@ -89,11 +89,26 @@ def js_client() -> JSClient:
     return JSClient(host=HOST, port=PORT, namespace=TEST_NS, real_time=True)
 
 
+def _get_client(decode: bool) -> aioredis.Redis:
+    return aioredis.from_url(
+        "redis://" + HOST, encoding="utf-8", decode_responses=decode
+    )
+
+
 @pytest.fixture()
 async def redis_client() -> AsyncGenerator[aioredis.Redis, None]:
-    client = aioredis.from_url(
-        "redis://" + HOST, encoding="utf-8", decode_responses=True
-    )
+    client = _get_client(decode=True)
+
+    yield client
+
+    await client.flushall()
+    await client.close()
+
+
+@pytest.fixture()
+async def redis_client_bytes() -> AsyncGenerator[aioredis.Redis, None]:
+    client = _get_client(decode=False)
+
     yield client
 
     await client.flushall()
@@ -102,7 +117,14 @@ async def redis_client() -> AsyncGenerator[aioredis.Redis, None]:
 
 @pytest.fixture
 def client(redis_client: aioredis.Redis) -> AIORSMQ:
-    return AIORSMQ(client=redis_client, namespace=TEST_NS, real_time=True)
+    return AIORSMQ(
+        client=redis_client, client_encoding="utf-8", namespace=TEST_NS, real_time=True
+    )
+
+
+@pytest.fixture
+def client_bytes(redis_client_bytes: aioredis.Redis) -> AIORSMQ:
+    return AIORSMQ(client=redis_client_bytes, namespace=TEST_NS, real_time=True)
 
 
 @pytest.fixture

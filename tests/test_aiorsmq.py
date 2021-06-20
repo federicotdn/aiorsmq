@@ -89,6 +89,16 @@ async def test_send_message_failure_max_size(client: AIORSMQ, queue: str):
         await client.send_message(queue, message)
 
 
+async def test_send_message_failure_max_size_non_ascii(client: AIORSMQ, queue: str):
+    await client.set_queue_attributes(queue, max_size=1024)
+
+    # 'ñ' in utf-8 requires 2 bytes
+    message = "ñ" * 512 + "a"
+
+    with pytest.raises(InvalidValueException):
+        await client.send_message(queue, message)
+
+
 async def test_send_message(client: AIORSMQ, queue: str):
     uid = await client.send_message(queue, "foobar")
     assert len(uid) == 32
@@ -138,6 +148,26 @@ async def test_send_message_delay_queue_configured(client: AIORSMQ, qname: str):
     await client.create_queue(qname, delay=30)
     await client.send_message(qname, "foobar")
     assert not await client.receive_message(qname)
+
+
+async def test_send_message_bytes(client_bytes: AIORSMQ, queue: str):
+    message = b"\x00\xFF\xCA\xFE\x01\x02\x03"
+
+    uid = await client_bytes.send_message(queue, message)
+    assert uid
+
+    received = await client_bytes.receive_message(queue)
+    assert received
+    assert received.message == message
+
+
+async def test_send_message_bytes_failure_max_size(client_bytes: AIORSMQ, queue: str):
+    await client_bytes.set_queue_attributes(queue, max_size=1024)
+
+    message = b"\xFE\xDE" * 512 + b"\x00"
+
+    with pytest.raises(InvalidValueException):
+        await client_bytes.send_message(queue, message)
 
 
 async def test_receive_message_empty(client: AIORSMQ, queue: str):

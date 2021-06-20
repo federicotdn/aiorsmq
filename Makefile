@@ -16,3 +16,7 @@ test:
 
 lint:
 	flake8 aiorsmq tests
+
+
+html:
+	cd docs && rm -rf build && make html
