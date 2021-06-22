@@ -16,12 +16,15 @@ import sys
 sys.path.insert(0, os.path.abspath(".."))
 
 
+import aiorsmq
+
+
 # -- Project information -----------------------------------------------------
 
 project = "aiorsmq"
 copyright = "2021, Federico Tedin"
 author = "Federico Tedin"
-release = "0.1.0"
+release = aiorsmq.__version__
 
 
 # -- General configuration ---------------------------------------------------
@@ -57,5 +60,10 @@ html_static_path = ["_static"]
 
 html_theme_options = {
     "page_width": "65%",
-    "body_max_width": "100%"
+    "body_max_width": "100%",
+    "github_user": "federicotdn",
+    "github_repo": "aiorsmq",
+    "description": "An async Python implementation of RSMQ.",
+    "github_banner": True,
+    "github_button": True,
 }
