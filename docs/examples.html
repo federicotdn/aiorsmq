@@ -1,0 +1,190 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>Examples &#8212; aiorsmq 0.1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="API Documentation" href="aiorsmq.html" />
+    <link rel="prev" title="Installation" href="install.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="examples">
+<h1>Examples<a class="headerlink" href="#examples" title="Permalink to this headline">¶</a></h1>
+<p>Once you have <a class="reference external" href="install.html">installed</a> aiorsmq, you can test out some of its features.</p>
+<p><strong>Note</strong>: The examples in this page assume there is a Redis instance
+running at <code class="docutils literal notranslate"><span class="pre">localhost:6379</span></code>.</p>
+<section id="sending-messages">
+<h2>Sending Messages<a class="headerlink" href="#sending-messages" title="Permalink to this headline">¶</a></h2>
+<p>In this example, we first create a connection to Redis by using the
+<code class="docutils literal notranslate"><span class="pre">from_url</span></code> function of the <a class="reference external" href="https://github.com/aio-libs/aioredis-py">aioredis</a> package. Then, we create a
+new queue called <code class="docutils literal notranslate"><span class="pre">my-queue</span></code>, and we send one message to it.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">asyncio</span>  <span class="c1"># For the .run() function</span>
+<span class="kn">import</span> <span class="nn">aioredis</span>  <span class="c1"># For creating the connection to Redis</span>
+<span class="kn">from</span> <span class="nn">aiorsmq</span> <span class="kn">import</span> <span class="n">AIORSMQ</span>
+
+
+<span class="k">async</span> <span class="k">def</span> <span class="nf">send_message</span><span class="p">():</span>
+    <span class="n">client</span> <span class="o">=</span> <span class="n">aioredis</span><span class="o">.</span><span class="n">from_url</span><span class="p">(</span><span class="n">url</span><span class="o">=</span><span class="s2">&quot;redis://localhost:6379&quot;</span><span class="p">,</span> <span class="n">decode_responses</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">rsmq</span> <span class="o">=</span> <span class="n">AIORSMQ</span><span class="p">(</span><span class="n">client</span><span class="o">=</span><span class="n">client</span><span class="p">)</span>
+
+    <span class="k">await</span> <span class="n">rsmq</span><span class="o">.</span><span class="n">create_queue</span><span class="p">(</span><span class="s2">&quot;my-queue&quot;</span><span class="p">)</span>
+    <span class="k">await</span> <span class="n">rsmq</span><span class="o">.</span><span class="n">send_message</span><span class="p">(</span><span class="s2">&quot;my-queue&quot;</span><span class="p">,</span> <span class="s2">&quot;Hello, world!&quot;</span><span class="p">)</span>
+
+
+<span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">send_message</span><span class="p">())</span>
+</pre></div>
+</div>
+</section>
+<section id="receiving-messages">
+<h2>Receiving Messages<a class="headerlink" href="#receiving-messages" title="Permalink to this headline">¶</a></h2>
+<p>To receive a message, we need to call the <code class="docutils literal notranslate"><span class="pre">receive_message</span></code> method,
+like so:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">asyncio</span>
+<span class="kn">import</span> <span class="nn">aioredis</span>
+<span class="kn">from</span> <span class="nn">aiorsmq</span> <span class="kn">import</span> <span class="n">AIORSMQ</span>
+
+
+<span class="k">async</span> <span class="k">def</span> <span class="nf">receive_message</span><span class="p">():</span>
+    <span class="n">client</span> <span class="o">=</span> <span class="n">aioredis</span><span class="o">.</span><span class="n">from_url</span><span class="p">(</span><span class="n">url</span><span class="o">=</span><span class="s2">&quot;redis://localhost:6379&quot;</span><span class="p">,</span> <span class="n">decode_responses</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">rsmq</span> <span class="o">=</span> <span class="n">AIORSMQ</span><span class="p">(</span><span class="n">client</span><span class="o">=</span><span class="n">client</span><span class="p">)</span>
+
+    <span class="n">message</span> <span class="o">=</span> <span class="k">await</span> <span class="n">rsmq</span><span class="o">.</span><span class="n">receive_message</span><span class="p">(</span><span class="s2">&quot;my-queue&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;The message is:&quot;</span><span class="p">,</span> <span class="n">message</span><span class="o">.</span><span class="n">contents</span><span class="p">)</span>
+
+    <span class="k">await</span> <span class="n">rsmq</span><span class="o">.</span><span class="n">delete_message</span><span class="p">(</span><span class="s2">&quot;my-queue&quot;</span><span class="p">,</span> <span class="n">message</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+
+
+<span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">receive_message</span><span class="p">())</span>
+</pre></div>
+</div>
+<p>Running this code will print:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>The message is: Hello, world!
+</pre></div>
+</div>
+<p>Calling <code class="docutils literal notranslate"><span class="pre">delete_message</span></code> is necessary to ensure that the message is
+removed from the queue. By default, receiving a message from a queue
+will make the message ‘invisible’ for 30 seconds (this is called the
+visiblity timer or <code class="docutils literal notranslate"><span class="pre">vt</span></code>). After this period has elapsed, the message
+will be re-queued again. The idea of this mechanism is to ensure no
+messages are lost: if your program crashes or errors out after calling
+<code class="docutils literal notranslate"><span class="pre">receive_message</span></code> but before calling <code class="docutils literal notranslate"><span class="pre">delete_message</span></code>, you will
+have a chance to receive the message again.</p>
+<p>If you wish to automatically delete a message immediately after receiving
+it, you can use the <code class="docutils literal notranslate"><span class="pre">pop_message</span></code> method instead.</p>
+</section>
+<section id="full-reference">
+<h2>Full Reference<a class="headerlink" href="#full-reference" title="Permalink to this headline">¶</a></h2>
+<p>To see the full documentation for every public class, method and function in
+aiorsmq, please see the <a class="reference external" href="aiorsmq.html">API Documentation</a> page.</p>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">aiorsmq</a></h1>
+
+
+
+<p class="blurb">An async Python implementation of RSMQ.</p>
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=federicotdn&repo=aiorsmq&type=watch&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="aiorsmq.html">API Documentation</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="install.html" title="previous chapter">Installation</a></li>
+      <li>Next: <a href="aiorsmq.html" title="next chapter">API Documentation</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2021, Federico Tedin.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.0.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/examples.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+    <a href="https://github.com/federicotdn/aiorsmq" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>
