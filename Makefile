@@ -23,3 +23,11 @@ html:
 	cd docs-src && make html
 	cp -r docs-src/build/html docs
 	touch docs/.nojekyll
+
+package:
+	mkdir -p dist
+	rm -rf dist/*
+	python3 setup.py sdist
+
+upload: package
+	twine upload dist/*
