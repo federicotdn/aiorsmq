@@ -460,7 +460,9 @@ class AIORSMQ:
 
         pipeline = self._client.pipeline()
 
-        pipeline.zadd(key_sorted_set, {context.uid: context.ts + delay * 1000})
+        pipeline.zadd(
+            key_sorted_set, {utils.ensure(context.uid): context.ts + delay * 1000}
+        )
         pipeline.hset(key_hash, context.uid, contents)
         pipeline.hincrby(key_hash, compat.TOTAL_SENT, 1)
 
@@ -518,7 +520,7 @@ class AIORSMQ:
         vt = context.vt if vt is None else vt
 
         result: scripts.MsgRecv = await self._script_receive_message(
-            keys=[key_sorted_set, context.ts, context.ts + vt * 1000]
+            keys=[key_sorted_set, str(context.ts), str(context.ts + vt * 1000)]
         )
         if not result:
             return None
@@ -583,7 +585,7 @@ class AIORSMQ:
         key_sorted_set = compat.queue_sorted_set(self._ns, queue_name)
 
         result: scripts.MsgRecv = await self._script_pop_message(
-            keys=[key_sorted_set, context.ts]
+            keys=[key_sorted_set, str(context.ts)]
         )
         if not result:
             return None
@@ -615,7 +617,7 @@ class AIORSMQ:
         key_sorted_set = compat.queue_sorted_set(self._ns, queue_name)
 
         result: scripts.MsgVisibility = await self._script_change_message_visibility(
-            keys=[key_sorted_set, id, context.ts + vt * 1000]
+            keys=[key_sorted_set, id, str(context.ts + vt * 1000)]
         )
 
         if result == 0:
