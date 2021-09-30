@@ -16,6 +16,7 @@ setup(
     long_description_content_type="text/markdown",
     url="https://github.com/federicotdn/aiorsmq",
     author="Federico Tedin",
+    packages=["aiorsmq"],
     author_email="federicotedin@gmail.com",
     classifiers=[
         "Intended Audience :: Developers",

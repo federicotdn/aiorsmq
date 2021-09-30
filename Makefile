@@ -27,7 +27,7 @@ html:
 package:
 	mkdir -p dist
 	rm -rf dist/*
-	python3 setup.py sdist
+	python3 setup.py sdist bdist_wheel
 
 upload: package
 	twine upload dist/*
